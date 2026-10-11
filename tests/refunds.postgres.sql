@@ -1,0 +1,35 @@
+BEGIN;
+DO $$
+DECLARE s uuid;p uuid;l uuid;o uuid;one jsonb;two jsonb;code text:=upper(substr(replace(gen_random_uuid()::text,'-',''),1,12));v numeric;n integer;d uuid;
+BEGIN
+ INSERT INTO public.sellers(user_id,store_username,store_name,contact_email)VALUES('refund-fixture-'||code,'refund-'||lower(code),'Refund fixture','seller@example.com')RETURNING id INTO s;
+ INSERT INTO public.products(seller_id,title,price,stock,delivery_options)VALUES(s,'Fixture',100,3,ARRAY['meetup'])RETURNING id INTO p;
+ INSERT INTO public.purchase_links(seller_id,product_id,public_id)VALUES(s,p,code)RETURNING id INTO l;
+ one:=public.reserve_purchase(code,'RF-'||code,'token','Buyer','buyer@example.com','0000000000','{}','meetup');o:=(one->>'id')::uuid;
+ INSERT INTO public.payments(order_id,payment_intent_id,amount,currency,status)VALUES(o,'pi_fixture_'||code,100,'MXN','SUCCEEDED');
+ UPDATE public.orders SET payment_status='SUCCEEDED',status='PAID' WHERE id=o;
+ one:=public.claim_refund_request(o,'request-one',2500,gen_random_uuid());
+ IF public.claim_settlement(o) IS NOT NULL THEN RAISE EXCEPTION 'Settlement raced refund';END IF;
+ BEGIN PERFORM public.claim_refund_request(o,'request-two',1000,gen_random_uuid());RAISE EXCEPTION 'Concurrent refund accepted';EXCEPTION WHEN raise_exception THEN IF SQLERRM<>'Another refund is in progress' THEN RAISE;END IF;END;
+ PERFORM public.finish_refund_request((one->>'id')::uuid,'re_one_'||code,'SUCCEEDED',2500,'MXN');
+ SELECT refunded_amount INTO v FROM public.orders WHERE id=o AND status='PAID' AND payment_status='SUCCEEDED';IF v<>25 OR v IS NULL THEN RAISE EXCEPTION 'Partial refund marked terminal';END IF;
+ PERFORM public.finish_refund_request((one->>'id')::uuid,'re_one_'||code,'SUCCEEDED',2500,'MXN');
+ SELECT count(*) INTO n FROM public.events WHERE order_id=o AND type='REFUND_CREATED';IF n<>1 THEN RAISE EXCEPTION 'Duplicate refund event';END IF;
+ BEGIN PERFORM public.claim_refund_request(o,'request-one',2600,gen_random_uuid());RAISE EXCEPTION 'Changed idempotency amount accepted';EXCEPTION WHEN raise_exception THEN IF SQLERRM<>'Idempotency key amount mismatch' THEN RAISE;END IF;END;
+ BEGIN PERFORM public.claim_refund_request(o,'too-large',7600,gen_random_uuid());RAISE EXCEPTION 'Over-refund accepted';EXCEPTION WHEN raise_exception THEN IF SQLERRM<>'Amount exceeds remaining payment' THEN RAISE;END IF;END;
+ two:=public.claim_refund_request(o,'request-two',7500,gen_random_uuid());
+ PERFORM public.finish_refund_request((two->>'id')::uuid,'re_two_'||code,'SUCCEEDED',7500,'MXN');
+ SELECT refunded_amount INTO v FROM public.orders WHERE id=o AND status='REFUNDED' AND payment_status='REFUNDED';IF v<>100 OR v IS NULL THEN RAISE EXCEPTION 'Full refund incomplete';END IF;
+ PERFORM public.finish_refund_request((two->>'id')::uuid,'re_two_'||code,'FAILED',7500,'MXN');
+ SELECT refunded_amount INTO v FROM public.orders WHERE id=o AND status='PAID' AND refund_started_at IS NOT NULL;IF v<>25 OR v IS NULL THEN RAISE EXCEPTION 'Bank failure not reconciled';END IF;
+ one:=public.reserve_purchase(code,'RF-B'||code,'token','Buyer','buyer@example.com','0000000000','{}','meetup');o:=(one->>'id')::uuid;UPDATE public.orders SET status='PAID',payment_status='SUCCEEDED' WHERE id=o;
+ d:=public.open_order_dispute(o,'other','Test overdue dispute');UPDATE public.disputes SET response_due_at=now()-interval '1 day' WHERE id=d;
+ PERFORM public.queue_overdue_disputes();PERFORM public.queue_overdue_disputes();
+ SELECT count(*) INTO n FROM public.operational_alerts WHERE order_id=o AND kind='DISPUTE_OVERDUE';IF n<>1 THEN RAISE EXCEPTION 'Duplicate overdue alerts';END IF;
+ SELECT count(*) INTO n FROM public.notification_outbox WHERE order_id=o AND kind='DISPUTE_OVERDUE';IF n<>1 THEN RAISE EXCEPTION 'Duplicate overdue notifications';END IF;
+ PERFORM public.resolve_order_dispute(d,'Test resolved','fixture-admin',false);PERFORM public.queue_overdue_disputes();
+ SELECT count(*) INTO n FROM public.operational_alerts WHERE order_id=o AND kind='DISPUTE_OVERDUE' AND status='OPEN';IF n<>0 THEN RAISE EXCEPTION 'Resolved dispute alert remained open';END IF;
+ IF has_function_privilege('anon','public.finish_refund_request(uuid,text,text,bigint,text)','EXECUTE') THEN RAISE EXCEPTION 'Refund operation exposed';END IF;
+END $$;
+SELECT 'PASS: partial/full refunds, idempotency, remaining limits, concurrent exclusion, bank failure recovery, overdue deduplication, private RPC' AS verification;
+ROLLBACK;

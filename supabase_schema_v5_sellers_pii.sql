@@ -1,0 +1,74 @@
+-- =============================================================================
+-- ROUTEFLOW - MIGRATION V5: CLOSE THE `sellers` PII HOLE (C1)
+-- =============================================================================
+-- The defect
+-- ---------
+-- Schema V3 declared:
+--
+--     CREATE POLICY "public read sellers" ON sellers FOR SELECT USING (true);
+--
+-- `USING (true)` grants SELECT on the WHOLE ROW. The `sellers` table carries:
+--
+--     contact_email      seller email address
+--     contact_phone      seller phone number
+--     ship_from_address  the seller's physical origin address (JSONB)
+--     kyc_document_url   storage path of an uploaded identity document
+--
+-- The anon key is `NEXT_PUBLIC_SUPABASE_ANON_KEY`, which means it is compiled
+-- into the browser bundle. Anyone could therefore read those columns for every
+-- seller in the platform directly through PostgREST, completely bypassing the
+-- DTO layer in `domain/dto.ts`, which carefully omits exactly these fields.
+--
+-- Defence in depth was one-directional: the DTOs protected the API surface but
+-- the table itself was wide open underneath them.
+--
+-- Why dropping the policy breaks nothing
+-- ---------------------------------------
+-- Verified before writing this migration: NO file in `src/` imports
+-- `@/lib/supabaseClient`. The browser anon client is never used. The public
+-- storefront resolves seller data on the SERVER through
+-- `resolvePublicPurchaseLink()` in `purchaseLinkRepository.ts`, which uses
+-- `getSupabaseAdmin()` (service role, RLS bypassed). The route that serves it,
+-- `GET /api/public/links/[publicId]`, is the only path to seller data and it
+-- already emits `toPublicPurchaseLinkView()` - the safe subset.
+--
+-- So no anon SELECT on `sellers` is required by anything.
+--
+-- The fix
+-- -------
+-- Revoke the blanket public SELECT. With RLS enabled and no SELECT policy on
+-- `sellers`, Postgres denies every SELECT to anon and authenticated alike; the
+-- service role still bypasses RLS, so the application is unaffected.
+--
+-- This is database-level enforcement, not an application-layer convention: it
+-- holds even for a caller that bypasses RouteFlow entirely.
+--
+-- Safe to re-run.
+-- =============================================================================
+
+BEGIN;
+
+DROP POLICY IF EXISTS "public read sellers" ON sellers;
+
+COMMIT;
+
+-- -----------------------------------------------------------------------------
+-- VERIFICATION (run after applying)
+-- -----------------------------------------------------------------------------
+-- 1. Confirm no SELECT policy on `sellers` survives. Expect ZERO rows.
+--
+--    SELECT policyname, cmd, qual
+--      FROM pg_policies
+--     WHERE tablename = 'sellers'
+--       AND cmd = 'SELECT';
+--
+-- 2. Confirm the sensitive columns still exist (this migration removes access,
+--    never data).
+--
+--    SELECT column_name
+--      FROM information_schema.columns
+--     WHERE table_name = 'sellers'
+--       AND column_name IN ('contact_email','contact_phone',
+--                           'ship_from_address','kyc_document_url')
+--     ORDER BY column_name;
+--    -- expect 4 rows

@@ -3,10 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/prepare-next-cache.cjs --dev",
+    "prebuild": "node scripts/prepare-next-cache.cjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest run",
+    "operations:dev": "node scripts/operations-worker.cjs",
+    "production:preflight": "node scripts/production-preflight.cjs",
+    "production:backup": "node scripts/backup-production.cjs",
+    "production:prepare": "node scripts/prepare-production-schema.cjs",
+    "stripe:listen": "node scripts/listen-stripe-development.cjs",
+    "webhook:verify:automatic": "node scripts/verify-test-checkout-event.cjs --automatic"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.2",
@@ -14,7 +23,8 @@
     "@stripe/stripe-js": "^9.16.0",
     "@supabase/supabase-js": "^2.116.0",
     "leaflet": "^1.9.4",
-    "next": "15.1.0",
+    "lucide-react": "^1.48.0",
+    "next": "15.5.27",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-leaflet": "^5.0.0",
@@ -26,10 +36,12 @@
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.7.0",
     "eslint": "^9.17.0",
-    "eslint-config-next": "15.1.0",
+    "eslint-config-next": "15.5.27",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^3.2.7"
   }
 }

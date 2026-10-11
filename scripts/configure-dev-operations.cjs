@@ -1,0 +1,10 @@
+const fs=require('node:fs');const crypto=require('node:crypto');
+require('@next/env').loadEnvConfig(process.cwd());
+if(process.env.NEXT_PUBLIC_SUPABASE_URL!=='https://xnnkcgzijlpwxnvarqng.supabase.co'||!String(process.env.STRIPE_SECRET_KEY).startsWith('sk_test_'))throw new Error('Development only');
+const path='.env.local';const contents=fs.readFileSync(path,'utf8');
+fs.mkdirSync('.routeflow-data',{recursive:true});
+if(!fs.existsSync('.routeflow-data/env-before-operations.txt'))fs.writeFileSync('.routeflow-data/env-before-operations.txt',contents);
+let updated=contents;
+if(!process.env.CRON_SECRET)updated+=`\nCRON_SECRET=${crypto.randomBytes(32).toString('hex')}\n`;
+if(!process.env.ROUTEFLOW_EMAIL_DELIVERY)updated+='\nROUTEFLOW_EMAIL_DELIVERY=preview\n';
+fs.writeFileSync(path,updated);console.log('Development worker configured; email remains in preview. Secrets omitted.');

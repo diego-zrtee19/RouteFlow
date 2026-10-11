@@ -9,6 +9,18 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        brand: {
+          navy: "#0B1220",
+          slate: "#475569",
+          slateLight: "#94A3B8",
+          bg: "#F8FAFC",
+          white: "#FFFFFF",
+          blue: "#2563EB",
+          blueHover: "#1D4ED8",
+          success: "#16A34A",
+          warning: "#F59E0B",
+          error: "#DC2626",
+        },
         primary: {
           50: "#eff6ff",
           100: "#dbeafe",
@@ -19,17 +31,11 @@ const config: Config = {
           600: "#2563eb",
           700: "#1d4ed8",
           800: "#1e40af",
-          900: "#1e3a8a",
+          900: "#0b1220",
         },
-        success: {
-          500: "#10b981",
-          600: "#059669",
-          700: "#047857",
-        },
-        warning: {
-          500: "#f59e0b",
-          600: "#d97706",
-        },
+      },
+      fontFamily: {
+        sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
       },
     },
   },

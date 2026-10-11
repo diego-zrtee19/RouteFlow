@@ -1,0 +1,118 @@
+import { NextResponse } from "next/server";
+import { requireSeller } from "@/lib/authz";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { apiErrorResponse } from "@/lib/apiResponse";
+export async function GET() {
+  const a = await requireSeller();
+  if (!a.ok)
+    return apiErrorResponse(a.code, "Seller access required", a.status);
+  try {
+    const db = getSupabaseAdmin();
+    const [
+      { data: s, error: se },
+      { data: products, error: pe },
+      { data: notes, error: ne },
+      { data: orders, error: oe },
+      { data: alerts, error: ale },
+    ] = await Promise.all([
+      db
+        .from("sellers")
+        .select(
+          "contact_email,contact_phone,ship_from_address,stripe_account_id,stripe_transfers_enabled,stripe_payouts_enabled",
+        )
+        .eq("id", a.value.id)
+        .single(),
+      db
+        .from("products")
+        .select(
+          "id,title,weight_kg,package_dimensions,delivery_options,is_active",
+        )
+        .eq("seller_id", a.value.id),
+      db
+        .from("notification_outbox")
+        .select("id,subject,body,status,created_at,order_id")
+        .eq("seller_id", a.value.id)
+        .eq("audience", "seller")
+        .order("created_at", { ascending: false })
+        .limit(15),
+      db
+        .from("orders")
+        .select("id,order_number,settlement_status,settlement_error")
+        .eq("seller_id", a.value.id)
+        .eq("status", "COMPLETED")
+        .order("created_at", { ascending: false })
+        .limit(10),
+      db
+        .from("operational_alerts")
+        .select("id,kind,order_id,message")
+        .eq("seller_id", a.value.id)
+        .eq("status", "OPEN")
+        .order("created_at", { ascending: false })
+        .limit(20),
+    ]);
+    if (se || pe || ne || oe || ale) throw se || pe || ne || oe || ale;
+    const origin = s.ship_from_address;
+    const configured =
+      origin &&
+      [
+        "fullName",
+        "phone",
+        "street",
+        "city",
+        "state",
+        "postalCode",
+        "country",
+      ].every((k) => origin[k]);
+    const shipping = (products ?? []).filter(
+      (p) => p.is_active && p.delivery_options?.includes("shipping"),
+    );
+    return NextResponse.json({
+      checks: [
+        {
+          label: "Datos de contacto",
+          done: Boolean(s.contact_email && s.contact_phone),
+          href: "/dashboard/settings",
+        },
+        {
+          label: "Dirección real de origen",
+          done: Boolean(configured && !JSON.stringify(origin).includes("DEMO")),
+          href: "/dashboard/settings",
+        },
+        {
+          label: "Primer producto publicado",
+          done: (products ?? []).some((p) => p.is_active),
+          href: "/dashboard/products",
+        },
+        {
+          label: "Peso y dimensiones de productos con envío",
+          done:
+            shipping.length > 0 &&
+            shipping.every((p) => p.weight_kg && p.package_dimensions),
+          href: "/dashboard/products",
+        },
+        {
+          label: "Cuenta de Stripe lista para recibir fondos",
+          done: Boolean(
+            s.stripe_account_id &&
+            s.stripe_transfers_enabled &&
+            s.stripe_payouts_enabled,
+          ),
+          href: "/dashboard/settings",
+        },
+      ],
+      notifications: notes ?? [],
+      alerts: alerts ?? [],
+      settlements: orders ?? [],
+      emailDelivery:
+        process.env.ROUTEFLOW_EMAIL_DELIVERY === "enabled" &&
+        Boolean(process.env.RESEND_API_KEY),
+    });
+  } catch (e) {
+    return apiErrorResponse(
+      "INTERNAL_ERROR",
+      "No se pudo cargar la preparación de tu tienda",
+      500,
+      e,
+    );
+  }
+}
