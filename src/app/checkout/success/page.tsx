@@ -160,7 +160,7 @@ function SuccessInner() {
   const supportEmail = "soporte@routeflow.mx";
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-16">
+    <div className="min-h-screen bg-brand-bg pb-16">
       <header className="bg-white border-b border-slate-200/80">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="font-extrabold text-sm text-[#0B1220]">
@@ -218,7 +218,7 @@ function SuccessInner() {
 
         {phase === "paid" && order && (
           <>
-            <Card className="p-8 text-center space-y-3 bg-gradient-to-b from-emerald-50/50 to-white">
+            <Card className="p-8 text-center space-y-3 bg-linear-to-b from-emerald-50/50 to-white">
               <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
               <h1 className="text-xl font-bold text-[#0B1220]">
                 {t("checkout.success.paidTitle")}

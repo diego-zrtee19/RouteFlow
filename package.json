@@ -8,12 +8,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint src --max-warnings=0",
     "test": "vitest run",
     "operations:dev": "node scripts/operations-worker.cjs",
     "production:preflight": "node scripts/production-preflight.cjs",
     "production:verify:database": "node scripts/verify-production-database.cjs",
+    "production:verify:services": "node scripts/verify-production-services.cjs",
     "production:backup": "node scripts/backup-production.cjs",
+    "production:backup:check": "node scripts/backup-production.cjs --check",
+    "production:backup:verify": "node scripts/verify-backup-artifact.cjs",
     "production:prepare": "node scripts/prepare-production-schema.cjs",
     "stripe:listen": "node scripts/listen-stripe-development.cjs",
     "webhook:verify:automatic": "node scripts/verify-test-checkout-event.cjs --automatic"
@@ -33,9 +36,17 @@
     "stripe": "^22.6.2"
   },
   "overrides": {
-    "postcss": "$postcss"
+    "postcss": "$postcss",
+    "postcss-selector-parser": "7.1.6",
+    "@next/eslint-plugin-next": {
+      ".": "14.2.35",
+      "glob": "10.5.0"
+    }
   },
   "devDependencies": {
+    "@eslint/compat": "2.1.1",
+    "@eslint/eslintrc": "3.3.7",
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
@@ -44,8 +55,8 @@
     "eslint": "^9.17.0",
     "eslint-config-next": "15.5.27",
     "postcss": "^8.5.29",
-    "tailwindcss": "^3.4.17",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.7.2",
-    "vitest": "^3.2.7"
+    "vitest": "5.0.3"
   }
 }

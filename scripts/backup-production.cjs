@@ -5,6 +5,19 @@ const { createHash } = require("node:crypto");
 require("@next/env").loadEnvConfig(process.cwd(), false);
 const ref = process.env.ROUTEFLOW_PRODUCTION_PROJECT_REF;
 const url = process.env.ROUTEFLOW_PRODUCTION_DATABASE_URL;
+if (process.argv.includes('--check')) {
+  const docker = spawnSync('docker', ['version', '--format', '{{.Server.Version}}'], {
+    windowsHide: true, encoding: 'utf8', shell: false, timeout: 15000,
+  });
+  const prerequisites = [
+    {name: 'Proyecto separado de desarrollo', ok: Boolean(ref && ref !== 'xnnkcgzijlpwxnvarqng')},
+    {name: 'Conexión Postgres configurada', ok: Boolean(url)},
+    {name: 'Docker disponible para pg_dump', ok: docker.status === 0},
+  ];
+  for (const item of prerequisites) console.log(`${item.ok ? 'OK' : 'PENDIENTE'}: ${item.name}`);
+  console.log('No se creó ni restauró un respaldo. Storage necesita copia independiente.');
+  process.exit(prerequisites.every(item => item.ok) ? 0 : 2);
+}
 if (!ref || ref === "xnnkcgzijlpwxnvarqng" || !url)
   throw new Error(
     "Configura un proyecto de producción separado y su conexión Postgres antes del respaldo",

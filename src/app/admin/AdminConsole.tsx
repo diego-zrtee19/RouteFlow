@@ -32,7 +32,7 @@ export default function AdminConsole({ stripe, stats, integrationStates }: Admin
   const statusLabel = (ok: boolean) => (ok ? t("admin.connected") : t("admin.notConfigured"));
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-6 max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen bg-brand-bg p-6 max-w-6xl mx-auto space-y-6">
       <Link href="/admin/disputes" className="text-blue-700 underline">Revisar y resolver disputas</Link>
       <Link href="/admin/operations" className="block text-blue-700 underline">Estado de la operación y alertas</Link>
       <div className="flex items-center justify-between border-b pb-4">

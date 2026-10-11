@@ -87,7 +87,7 @@ export default function PublicOrderTrackingPage() {
 
   if (loaded && !order) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
         <p>{t("order.notFound")}</p>
       </div>
     );
@@ -95,7 +95,7 @@ export default function PublicOrderTrackingPage() {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
         <p className="text-slate-400">…</p>
       </div>
     );
@@ -162,7 +162,7 @@ export default function PublicOrderTrackingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-16">
+    <div className="min-h-screen bg-brand-bg pb-16">
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="font-extrabold text-sm text-[#0B1220]">
@@ -175,7 +175,7 @@ export default function PublicOrderTrackingPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 pt-6 space-y-4">
-        <Card className="p-5 text-center space-y-2 bg-gradient-to-b from-blue-50/40 to-white">
+        <Card className="p-5 text-center space-y-2 bg-linear-to-b from-blue-50/40 to-white">
           <div className="w-10 h-10 rounded-full bg-blue-100 text-[#2563EB] flex items-center justify-center mx-auto">
             {confirmed ? (
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
@@ -261,7 +261,7 @@ export default function PublicOrderTrackingPage() {
                 <form onSubmit={handleDispute} className="space-y-2">
                   <select
                     aria-label="Motivo del problema"
-                    className="w-full text-xs p-2 border rounded"
+                    className="w-full text-xs p-2 border rounded-sm"
                     value={disputeReason}
                     onChange={(e) => setDisputeReason(e.target.value)}
                   >
@@ -277,7 +277,7 @@ export default function PublicOrderTrackingPage() {
                   <textarea
                     aria-label="Describe lo ocurrido"
                     maxLength={1000}
-                    className="w-full text-xs p-2 border rounded h-16"
+                    className="w-full text-xs p-2 border rounded-sm h-16"
                     placeholder={t("order.disputePlaceholder")}
                     value={disputeDesc}
                     onChange={(e) => setDisputeDesc(e.target.value)}

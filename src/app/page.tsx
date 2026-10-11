@@ -4,7 +4,7 @@ import { LandingSections } from "@/components/landing/LandingSections";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#F8FAFC]">
+    <main className="min-h-screen bg-brand-bg">
       <Navbar />
       <LandingHero />
       <LandingSections />

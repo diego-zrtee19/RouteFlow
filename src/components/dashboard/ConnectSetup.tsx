@@ -64,7 +64,7 @@ export function ConnectSetup() {
       <button
         onClick={connect}
         disabled={busy}
-        className="bg-blue-600 text-white rounded px-4 py-2 disabled:opacity-50"
+        className="bg-blue-600 text-white rounded-sm px-4 py-2 disabled:opacity-50"
       >
         {busy
           ? "Abriendo Stripe…"

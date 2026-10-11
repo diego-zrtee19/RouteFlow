@@ -139,7 +139,7 @@ export default function OrdersPage() {
             <input
               type="text"
               placeholder={t("dashboard.orders.searchPlaceholder")}
-              className="pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg w-full sm:w-60 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg w-full sm:w-60 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

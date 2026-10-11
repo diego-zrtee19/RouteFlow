@@ -68,7 +68,7 @@ export default function PublicProductPage() {
 
   if (!item && !serverMissed) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
         <p className="text-sm text-slate-500">{t("p.loading")}</p>
       </div>
     );
@@ -76,7 +76,7 @@ export default function PublicProductPage() {
 
   if (!item) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
         <Card className="max-w-md w-full p-8 text-center space-y-4">
           <AlertCircle className="w-12 h-12 text-slate-400 mx-auto" />
           <h1 className="text-xl font-bold text-[#0B1220]">{t("p.notFoundTitle")}</h1>
@@ -92,11 +92,11 @@ export default function PublicProductPage() {
   const { product, seller } = item;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-24 md:pb-12">
+    <div className="min-h-screen bg-brand-bg pb-24 md:pb-12">
       <header className="bg-white border-b border-slate-200/80 sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-1.5">
-            <div className="w-6 h-6 rounded bg-[#0B1220] flex items-center justify-center text-white font-bold text-xs">
+            <div className="w-6 h-6 rounded-sm bg-[#0B1220] flex items-center justify-center text-white font-bold text-xs">
               RF
             </div>
             <span className="font-extrabold text-sm text-[#0B1220]">RouteFlow</span>
@@ -112,7 +112,7 @@ export default function PublicProductPage() {
       <main className="max-w-4xl mx-auto px-4 pt-6 sm:pt-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
           <div>
-            <div className="w-full aspect-square rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-sm">
+            <div className="w-full aspect-square rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-xs">
               <Image
                 src={product.images[0] || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800"}
                 alt={product.title}

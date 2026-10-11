@@ -126,7 +126,7 @@ export default function CheckoutPage() {
 
   if (notFound) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
         <p>{t("checkout.notFound")}</p>
       </div>
     );
@@ -134,7 +134,7 @@ export default function CheckoutPage() {
 
   if (!item) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
         <p className="text-sm text-slate-500">{t("p.loading")}</p>
       </div>
     );
@@ -229,7 +229,7 @@ export default function CheckoutPage() {
   ]) as DeliveryMethod[];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-16">
+    <div className="min-h-screen bg-brand-bg pb-16">
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/" className="font-extrabold text-sm text-[#0B1220]">
@@ -382,7 +382,7 @@ export default function CheckoutPage() {
                     disabled={
                       quoting || !postalCode || !state || !city || !street
                     }
-                    className="border rounded px-3 py-2 text-blue-700"
+                    className="border rounded-sm px-3 py-2 text-blue-700"
                     onClick={async () => {
                       setQuoting(true);
                       setFormError(null);
@@ -429,7 +429,7 @@ export default function CheckoutPage() {
                       aria-label="Servicio de envío"
                       value={quoteId}
                       onChange={(e) => setQuoteId(e.target.value)}
-                      className="w-full border rounded p-2"
+                      className="w-full border rounded-sm p-2"
                     >
                       {quotes.map((q) => (
                         <option key={q.id} value={q.id}>

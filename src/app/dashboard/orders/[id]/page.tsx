@@ -627,7 +627,7 @@ export default function OrderDetailPage() {
                       value={refundAmount}
                       disabled={refundLoading || !!refundKey}
                       onChange={(e) => setRefundAmount(e.target.value)}
-                      className="w-full border rounded p-2"
+                      className="w-full border rounded-sm p-2"
                     />
                   </label>
                   {refundError ? (

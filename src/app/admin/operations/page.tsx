@@ -53,7 +53,7 @@ export default async function Operations() {
         Resolver disputas
       </Link>
       {alerts?.map((alert) => (
-        <article key={alert.id} className="border rounded p-3">
+        <article key={alert.id} className="border rounded-sm p-3">
           <strong>{alert.kind}</strong>
           <p>{alert.message}</p>
           {alert.order_id && <p>Pedido: {alert.order_id}</p>}

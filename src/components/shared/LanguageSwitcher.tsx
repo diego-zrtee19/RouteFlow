@@ -34,8 +34,8 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
         const isActive = locale === code;
         const active =
           variant === "dark"
-            ? "bg-slate-900 text-white shadow-sm"
-            : "bg-white text-[#0B1220] shadow-sm";
+            ? "bg-slate-900 text-white shadow-xs"
+            : "bg-white text-[#0B1220] shadow-xs";
         const idle =
           variant === "dark"
             ? "text-slate-300 hover:text-white"

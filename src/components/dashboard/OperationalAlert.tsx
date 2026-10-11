@@ -35,7 +35,7 @@ export function OperationalAlert({ alert }: { alert: AlertView }) {
     }
   }
   return (
-    <article className="border border-amber-200 bg-amber-50 rounded p-3 space-y-2">
+    <article className="border border-amber-200 bg-amber-50 rounded-sm p-3 space-y-2">
       <p>{resolved ? "Reserva recuperada" : alert.message}</p>
       {alert.order_id && (
         <Link
@@ -51,7 +51,7 @@ export function OperationalAlert({ alert }: { alert: AlertView }) {
             ¿Este pedido había descontado inventario?
             <select
               aria-label="Inventario de la reserva antigua"
-              className="block border rounded p-2"
+              className="block border rounded-sm p-2"
               value={choice}
               onChange={(e) => setChoice(e.target.value)}
             >
@@ -65,7 +65,7 @@ export function OperationalAlert({ alert }: { alert: AlertView }) {
           <button
             disabled={!choice || busy}
             onClick={recover}
-            className="border rounded px-3 py-2 disabled:opacity-50"
+            className="border rounded-sm px-3 py-2 disabled:opacity-50"
           >
             {busy ? "Verificando Stripe…" : "Recuperar reserva"}
           </button>

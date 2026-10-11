@@ -9,12 +9,12 @@ import { SignIn } from "@clerk/nextjs";
  */
 export default function SignInPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[#F8FAFC] p-6">
+    <main className="min-h-screen flex items-center justify-center bg-brand-bg p-6">
       <SignIn
         appearance={{
           elements: {
             primaryButton: { backgroundColor: "#2563EB" },
-            cardBox: "rounded-2xl shadow-sm border border-slate-200",
+            cardBox: "rounded-2xl shadow-xs border border-slate-200",
           },
         }}
       />

@@ -17,7 +17,7 @@ export default async function AdminDisputes() {
       <h1 className="text-2xl font-bold">Resolución de disputas</h1>
       {data?.length ? (
         data.map((d) => (
-          <article key={d.id} className="border rounded p-4">
+          <article key={d.id} className="border rounded-sm p-4">
             <h2>
               {d.order_id} · {d.status}
             </h2>

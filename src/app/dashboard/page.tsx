@@ -195,7 +195,7 @@ export default function DashboardOverviewPage() {
             </p>
           </div>
           <Link href="/dashboard/products/new">
-            <Button size="md" className="shadow-sm">
+            <Button size="md" className="shadow-xs">
               {t("dashboard.overview.createLink")}
             </Button>
           </Link>
@@ -271,7 +271,7 @@ export default function DashboardOverviewPage() {
               <span className="text-xs text-emerald-600 block">
                 {t("dashboard.overview.completed")}
               </span>
-              <span className="text-xl font-bold text-[#16A34A]">
+              <span className="text-xl font-bold text-brand-success">
                 {analytics.completedOrders}
               </span>
             </div>
@@ -321,7 +321,7 @@ export default function DashboardOverviewPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded text-slate-700">
+                    <span className="text-xs font-mono bg-slate-100 px-2 py-1 rounded-sm text-slate-700">
                       p/{link.publicId}
                     </span>
                     <Button

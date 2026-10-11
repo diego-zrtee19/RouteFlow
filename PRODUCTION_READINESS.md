@@ -1,5 +1,32 @@
 # Preparación de producción
 
+## Estado actualizado — 11 de octubre de 2026
+
+Las 12 alertas anteriores quedaron retiradas: Vitest 5.0.3, Tailwind 4.3.3,
+parser CSS corregido y reglas de Next sin fast-glob/braces. Next conserva la
+versión 15.5.27. Las reglas de lint usan un adaptador de ESLint 9; no se deshabilitó
+lint durante el build. La migración de estilos conserva colores y adapta las
+utilidades con la herramienta oficial. Tailwind 4 requiere navegadores modernos:
+Safari 16.4+, Chrome 111+ y Firefox 128+.
+
+Audit completo: cero vulnerabilidades. Build, lint y tipos pasaron, junto con
+162 pruebas de aplicación y diez comprobaciones de preparación/seguridad de
+proveedores e integridad de respaldos. Las pruebas de correo usan mocks y no
+enviaron correos reales. Production conserva cero pedidos, pagos y objetos de
+Storage. El propietario confirmó que todavía no tiene los datos y proveedores
+definitivos, y pidió preparar todo sin pagos ni envíos reales.
+
+Se agregaron `production:verify:services`, `production:backup:check` y
+`production:backup:verify`. El primer comando comprueba autenticación LIVE y
+dominio Resend únicamente cuando existen sus credenciales; no crea operaciones
+comerciales. El chequeo real actual devuelve PENDING para Stripe, FedEx y correo.
+El chequeo de respaldo detectó falta de conexión Postgres y Docker. No se creó
+un respaldo real ni se ensayó una restauración; las pruebas de checksum son
+fixtures explícitos y no sustituyen ese ensayo. Ver `PROVIDERS_ACTIVATION.md`.
+
+Los apartados históricos siguientes documentan el avance anterior; este estado
+actualizado reemplaza los conteos de alertas y pruebas previos.
+
 Supabase de producción: `kgoaenzfzkakndkgrwkn`, «RouteFlow Production», en la
 organización RouteFlow y región us-east-1. Se confirmó vacío antes de instalar
 el paquete canónico V3/V5/V6 y las migraciones en una transacción. Tiene 19 tablas

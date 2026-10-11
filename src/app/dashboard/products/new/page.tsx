@@ -94,7 +94,7 @@ export default function NewProductPage() {
         </div>
 
         {createdLink ? (
-          <Card className="p-8 text-center space-y-6 border-blue-200 bg-gradient-to-b from-blue-50/50 to-white">
+          <Card className="p-8 text-center space-y-6 border-blue-200 bg-linear-to-b from-blue-50/50 to-white">
             <div className="w-16 h-16 rounded-full bg-blue-100 text-[#2563EB] flex items-center justify-center mx-auto">
               <Link2 className="w-8 h-8" />
             </div>
@@ -105,7 +105,7 @@ export default function NewProductPage() {
               </p>
             </div>
 
-            <div className="p-4 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-3 shadow-sm">
+            <div className="p-4 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-3 shadow-xs">
               <span className="font-mono text-sm font-semibold text-slate-800 truncate">
                 {typeof window !== "undefined" ? window.location.origin : ""}/p/{createdLink}
               </span>

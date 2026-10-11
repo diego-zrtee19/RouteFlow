@@ -89,7 +89,7 @@ function PackageWeightEditor({ product }: { product: CatalogProduct }) {
               onChange={(e) =>
                 setDimensions({ ...dimensions, [key]: e.target.value })
               }
-              className="border rounded w-full p-2"
+              className="border rounded-sm w-full p-2"
             />
           </label>
         ))}
@@ -97,7 +97,7 @@ function PackageWeightEditor({ product }: { product: CatalogProduct }) {
       <label className="block text-xs">
         Quién paga el envío
         <select
-          className="border rounded w-full p-2"
+          className="border rounded-sm w-full p-2"
           value={payer}
           onChange={(e) => setPayer(e.target.value as "seller" | "buyer")}
         >
@@ -202,7 +202,7 @@ export default function ProductsPage() {
                         No image
                       </div>
                     )}
-                    <span className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full text-xs font-bold text-slate-800">
+                    <span className="absolute top-3 right-3 bg-white/90 backdrop-blur-xs px-2 py-0.5 rounded-full text-xs font-bold text-slate-800">
                       ${product.price} {product.currency}
                     </span>
                   </div>

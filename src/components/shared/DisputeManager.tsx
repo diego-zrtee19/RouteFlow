@@ -130,7 +130,7 @@ export function DisputeManager({
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 maxLength={4000}
-                className="w-full border rounded p-2"
+                className="w-full border rounded-sm p-2"
               />
               {audience === "seller" ? (
                 <button
@@ -142,7 +142,7 @@ export function DisputeManager({
                       "application/json",
                     )
                   }
-                  className="border rounded px-3 py-2"
+                  className="border rounded-sm px-3 py-2"
                 >
                   Enviar respuesta
                 </button>
@@ -160,7 +160,7 @@ export function DisputeManager({
                         "application/json",
                       )
                     }
-                    className="border rounded px-3 py-2"
+                    className="border rounded-sm px-3 py-2"
                   >
                     Resolver con reembolso
                   </button>
@@ -176,7 +176,7 @@ export function DisputeManager({
                         "application/json",
                       )
                     }
-                    className="border rounded px-3 py-2"
+                    className="border rounded-sm px-3 py-2"
                   >
                     Resolver a favor del vendedor
                   </button>

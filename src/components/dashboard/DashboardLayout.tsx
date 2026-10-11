@@ -209,7 +209,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   }, [isLoaded, isSignedIn, redirectToSignIn]);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col md:flex-row">
+    <div className="min-h-screen bg-brand-bg flex flex-col md:flex-row">
       {/* DESKTOP SIDEBAR */}
       <aside className="w-64 bg-white border-r border-slate-200/80 p-5 hidden md:flex flex-col justify-between shrink-0 h-screen sticky top-0">
         <div>

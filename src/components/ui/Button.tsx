@@ -15,7 +15,7 @@ export const Button: React.FC<ButtonProps> = ({
   className = "",
   ...props
 }) => {
-  const baseStyles = "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100 select-none cursor-pointer";
+  const baseStyles = "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-hidden focus:ring-2 focus:ring-offset-2 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100 select-none cursor-pointer";
 
   const sizeStyles = {
     sm: "text-xs px-3 py-1.5 gap-1.5",
@@ -24,12 +24,12 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const variantStyles = {
-    primary: "bg-[#2563EB] hover:bg-[#1D4ED8] text-white focus:ring-[#2563EB]/40 shadow-sm shadow-blue-500/20",
-    secondary: "bg-white hover:bg-slate-50 text-[#0B1220] border border-slate-200 focus:ring-slate-300 shadow-sm",
-    destructive: "bg-[#DC2626] hover:bg-red-700 text-white focus:ring-red-400 shadow-sm shadow-red-500/20",
+    primary: "bg-[#2563EB] hover:bg-[#1D4ED8] text-white focus:ring-[#2563EB]/40 shadow-xs shadow-blue-500/20",
+    secondary: "bg-white hover:bg-slate-50 text-[#0B1220] border border-slate-200 focus:ring-slate-300 shadow-xs",
+    destructive: "bg-brand-error hover:bg-red-700 text-white focus:ring-red-400 shadow-xs shadow-red-500/20",
     outline: "bg-transparent hover:bg-slate-100 text-[#0B1220] border border-slate-300 focus:ring-slate-300",
-    ghost: "bg-transparent hover:bg-slate-100 text-[#475569] hover:text-[#0B1220] focus:ring-slate-200",
-    success: "bg-[#16A34A] hover:bg-emerald-700 text-white focus:ring-emerald-400 shadow-sm",
+    ghost: "bg-transparent hover:bg-slate-100 text-brand-slate hover:text-[#0B1220] focus:ring-slate-200",
+    success: "bg-brand-success hover:bg-emerald-700 text-white focus:ring-emerald-400 shadow-xs",
   };
 
   return (

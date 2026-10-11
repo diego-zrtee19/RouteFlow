@@ -51,7 +51,7 @@ export const Footer: React.FC = () => {
     <footer className="border-t border-slate-200/80 bg-white py-12">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-slate-500">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-[#0B1220] flex items-center justify-center text-white font-bold text-xs">
+          <div className="w-6 h-6 rounded-sm bg-[#0B1220] flex items-center justify-center text-white font-bold text-xs">
             RF
           </div>
           <span className="font-bold text-[#0B1220]">RouteFlow</span>

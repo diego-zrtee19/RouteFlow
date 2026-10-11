@@ -10,7 +10,7 @@ export const LandingHero: React.FC = () => {
   const { t } = useI18n();
 
   return (
-    <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden bg-gradient-to-b from-white via-slate-50/50 to-[#F8FAFC]">
+    <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden bg-linear-to-b from-white via-slate-50/50 to-[#F8FAFC]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         {/* Value Tag */}
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200/60 text-xs font-semibold text-[#2563EB] mb-8 animate-fade-in-up">
@@ -92,7 +92,7 @@ export const LandingHero: React.FC = () => {
 
             {/* Step 5 */}
             <div className="flex flex-col items-center text-center p-3 rounded-xl bg-emerald-50 border border-emerald-100">
-              <span className="text-xs font-bold text-[#16A34A]">{t("landing.hero.step5.title")}</span>
+              <span className="text-xs font-bold text-brand-success">{t("landing.hero.step5.title")}</span>
               <span className="text-[11px] text-emerald-600/80 mt-1">{t("landing.hero.step5.sub")}</span>
             </div>
           </div>
