@@ -46,7 +46,7 @@ export function readBuyerToken(orderId: string): string | null {
   if (!orderId) return null;
 
   try {
-    return window.sessionStorage.getItem(`${STORAGE_PREFIX}${orderId}`);
+    return window.sessionStorage.getItem(`${STORAGE_PREFIX}${orderId}`) ?? window.localStorage.getItem(`${STORAGE_PREFIX}${orderId}`);
   } catch {
     return null;
   }
@@ -58,6 +58,7 @@ export function clearBuyerToken(orderId: string): void {
 
   try {
     window.sessionStorage.removeItem(`${STORAGE_PREFIX}${orderId}`);
+    window.localStorage.removeItem(`${STORAGE_PREFIX}${orderId}`);
   } catch {
     // Nothing to do; the token simply expires with the tab.
   }
@@ -68,5 +69,15 @@ export function storeBuyerSession(orderId: string, sessionId: string): void {
 }
 
 export function readBuyerSession(orderId: string): string | null {
-  try { return window.sessionStorage.getItem(`routeflow.buyerSession.${orderId}`); } catch { return null; }
+  try { return window.sessionStorage.getItem(`routeflow.buyerSession.${orderId}`) ?? window.localStorage.getItem(`routeflow.buyerSession.${orderId}`); } catch { return null; }
+}
+
+/** Explicit buyer opt-in, never automatic on a shared device. */
+export function rememberBuyerAccess(orderId: string, token: string | null, session: string | null): boolean {
+  try {
+    if (!token && !session) return false;
+    if (token) window.localStorage.setItem(`${STORAGE_PREFIX}${orderId}`, token);
+    if (session) window.localStorage.setItem(`routeflow.buyerSession.${orderId}`, session);
+    return true;
+  } catch { return false; }
 }

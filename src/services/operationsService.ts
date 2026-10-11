@@ -1,4 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { notificationMessage, readableNotificationBody } from "@/domain/notificationMessage";
 import { getStripe, isStripeTestMode } from "@/lib/stripe";
 import { cancelOrder } from "@/repositories/orderRepository";
 import { reconcileCheckoutSession } from "@/services/checkoutService";
@@ -49,7 +50,7 @@ export async function processNotifications() {
           from: process.env.ROUTEFLOW_EMAIL_FROM,
           to: [job.recipient],
           subject: job.subject,
-          text: job.body,
+          text: `${readableNotificationBody(job.body)}\n\n${notificationMessage(job.kind, job.audience)}`,
         }),
       });
       if (!response.ok)

@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 import { useI18n } from "@/i18n/LanguageProvider";
 import type { DeliveryMethod } from "@/domain/types";
+import { PurchaseGuide } from "@/components/shared/PurchaseGuide";
 
 interface PublicLinkPayload {
   publicId: string;
@@ -102,7 +103,7 @@ export default function PublicProductPage() {
           </Link>
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200">
             <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-            <span>{t("p.verified")}</span>
+            <span>Pedido con seguimiento</span>
           </div>
           <LanguageSwitcher />
         </div>
@@ -126,7 +127,7 @@ export default function PublicProductPage() {
           <div className="space-y-6">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-[#2563EB]">
-                {t("p.availableItem")}
+                {product.inStock ? t("p.availableItem") : "Producto agotado"}
               </span>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0B1220] mt-1 mb-2 leading-tight">
                 {product.title}
@@ -164,9 +165,11 @@ export default function PublicProductPage() {
               </div>
             </div>
 
+            <p className="text-sm text-slate-600">{seller.kycVerified ? "Identidad verificada registrada." : "Este vendedor todavía no tiene una verificación de identidad registrada."}</p>
+            <PurchaseGuide />
             <div className="hidden md:block pt-2">
               <Link href={`/checkout/${publicId}`}>
-                <Button size="lg" className="w-full py-4 text-base font-bold shadow-md">
+                <Button disabled={!product.inStock} size="lg" className="w-full py-4 text-base font-bold shadow-md">
                   {t("p.buySecurely")}
                   <ArrowRight className="w-4 h-4 ml-1.5" />
                 </Button>
@@ -182,7 +185,7 @@ export default function PublicProductPage() {
           <span className="text-xl font-black text-[#0B1220]">${product.price} {product.currency}</span>
         </div>
         <Link href={`/checkout/${publicId}`} className="flex-1 max-w-[200px]">
-          <Button size="md" className="w-full py-3 font-bold">
+          <Button disabled={!product.inStock} size="md" className="w-full py-3 font-bold">
             {t("p.buySecurely")}
           </Button>
         </Link>

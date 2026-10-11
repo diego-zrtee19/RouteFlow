@@ -11,6 +11,7 @@ import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 import { storeBuyerToken } from "@/lib/buyerTokenStore";
 import { useI18n } from "@/i18n/LanguageProvider";
 import type { DeliveryMethod } from "@/domain/types";
+import { PurchaseGuide } from "@/components/shared/PurchaseGuide";
 
 interface PublicLink {
   publicId: string;
@@ -245,6 +246,7 @@ export default function CheckoutPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 pt-6">
+        <div className="mb-5"><PurchaseGuide /></div>
         {cancelled ? (
           <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5">
             <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />

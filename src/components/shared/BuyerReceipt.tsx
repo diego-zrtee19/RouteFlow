@@ -3,6 +3,7 @@
 import Image from "next/image";
 import type { BuyerOrderView } from "@/domain/dto";
 import { Card } from "@/components/ui/Card";
+import { OrderProgress } from "./OrderProgress";
 
 export type BuyerReceiptView = BuyerOrderView & { deliveryPin?: string | null };
 
@@ -14,6 +15,7 @@ export function BuyerReceipt({ order }: { order: BuyerReceiptView }) {
   }).format(amount);
   return (
     <>
+      <OrderProgress order={order} />
       <Card className="p-5 space-y-4">
         <div className="flex justify-between gap-3">
           <div><h2 className="font-bold">Recibo de compra</h2><p className="font-mono text-sm text-slate-500">{order.orderNumber}</p></div>

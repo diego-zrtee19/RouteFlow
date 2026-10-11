@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
+import Image from "next/image";
+import { SharePurchaseLink } from "@/components/shared/SharePurchaseLink";
 import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Card } from "@/components/ui/Card";
@@ -15,10 +17,12 @@ export default function NewProductPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
-  const [stock, setStock] = useState("10");
+  const [stock, setStock] = useState("1");
   const [weightKg, setWeightKg] = useState("");
-  const [shipping, setShipping] = useState(true);
-  const [imageUrl, setImageUrl] = useState("https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80");
+  const [shipping, setShipping] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
+  const [dimensions, setDimensions] = useState({ length: "", width: "", height: "" });
+  const [uploading, setUploading] = useState(false);
   const [createdLink, setCreatedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -47,14 +51,14 @@ export default function NewProductPage() {
           currency: "MXN",
           images: imageUrl ? [imageUrl] : [],
           stock: parseInt(stock, 10),
-          ...(shipping ? { weightKg: Number(weightKg) } : {}),
-          deliveryOptions: shipping ? ["shipping", "local_delivery"] : ["local_delivery"],
+          ...(shipping ? { weightKg: Number(weightKg), dimensions: Object.fromEntries(Object.entries(dimensions).map(([k, v]) => [k, Number(v)])) } : {}),
+          deliveryOptions: shipping ? ["shipping", "meetup"] : ["meetup"],
         }),
       });
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data?.error === "unauthorized" ? t("productForm.errorAuth") : t("productForm.errorGeneric"));
+        setError(data?.error?.message || (data?.error === "unauthorized" ? t("productForm.errorAuth") : t("productForm.errorGeneric")));
         return;
       }
       if (!data?.link?.publicId) {
@@ -116,6 +120,7 @@ export default function NewProductPage() {
                 {t("productForm.preview")} <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
+            <SharePurchaseLink publicId={createdLink} title={title} />
           </Card>
         ) : (
           <Card className="p-6">
@@ -145,6 +150,8 @@ export default function NewProductPage() {
                 <Input
                   label={t("productForm.price")}
                   type="number"
+                min="0.01"
+                step="0.01"
                   placeholder="650"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
@@ -153,6 +160,8 @@ export default function NewProductPage() {
                 <Input
                   label={t("productForm.stock")}
                   type="number"
+                min="1"
+                step="1"
                   value={stock}
                   onChange={(e) => setStock(e.target.value)}
                   required
@@ -164,9 +173,21 @@ export default function NewProductPage() {
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
               />
+              <label className="block text-sm font-semibold">Subir foto del producto (pública, JPG / PNG / WebP; hasta 3 MB)
+                <input type="file" accept="image/jpeg,image/png,image/webp" disabled={uploading || loading} className="block w-full mt-2 min-h-11" onChange={async e => {
+                  const file = e.target.files?.[0]; e.target.value = ""; if (!file) return;
+                  if (file.size > 3 * 1024 * 1024) { setError("La foto debe pesar hasta 3 MB."); return; }
+                  setUploading(true); setError(null);
+                  try { const form = new FormData(); form.append("file", file); const res = await fetch("/api/dashboard/images", { method: "POST", body: form }); const data = await res.json(); if (!res.ok) throw Error(data.error?.message || "No se pudo subir la foto"); setImageUrl(data.url); } catch (err) { setError(err instanceof Error ? err.message : "No se pudo subir la foto"); } finally { setUploading(false); }
+                }} />
+              </label>
+              {uploading && <p role="status">Subiendo foto…</p>}
+              {imageUrl.startsWith("https://") && <Image src={imageUrl} alt="Vista previa del producto" width={180} height={180} unoptimized className="rounded-lg object-cover" />}
 
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={shipping} onChange={(e) => setShipping(e.target.checked)} />Ofrecer envío por paquetería además de entrega coordinada</label>
               {shipping && <Input label="Peso del paquete (kg)" type="number" min="0.001" step="0.001" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} required />}
+              {shipping && <fieldset className="space-y-2"><legend className="text-sm font-bold">Dimensiones del paquete cerrado (cm)</legend><div className="grid grid-cols-3 gap-2">{(["length", "width", "height"] as const).map((key, i) => <Input key={key} label={["Largo", "Ancho", "Alto"][i]} type="number" min="1" max="300" step="1" value={dimensions[key]} required onChange={e => setDimensions({ ...dimensions, [key]: e.target.value })} />)}</div></fieldset>}
+              <p className="text-sm text-slate-500">Usa fotos y stock reales. Para envío, completa también tu dirección de origen en Ajustes.</p>
 
               {error && (
                 <p className="text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">
@@ -175,7 +196,7 @@ export default function NewProductPage() {
               )}
 
               <div className="pt-4">
-                <Button type="submit" size="lg" className="w-full shadow-md" isLoading={loading}>
+                <Button disabled={uploading} type="submit" size="lg" className="w-full shadow-md" isLoading={loading}>
                   {t("productForm.submit")}
                 </Button>
               </div>

@@ -1,0 +1,12 @@
+import Link from "next/link";
+export default function HelpPage() {
+  return <main className="max-w-3xl mx-auto p-5 space-y-6">
+    <Link href="/" className="font-bold text-blue-700">RouteFlow</Link>
+    <h1 className="text-3xl font-bold">Tu compra, paso a paso</h1>
+    <section className="space-y-2"><h2 className="text-xl font-bold">Pago y vendedor</h2><p>Stripe procesa los pagos. El recibo aparece cuando RouteFlow confirma el pago. La identidad verificada se indica únicamente cuando existe una verificación registrada; no garantiza la calidad del producto ni su entrega.</p></section>
+    <section className="space-y-2"><h2 className="text-xl font-bold">Entrega</h2><p>FedEx: la guía y el rastreo aparecen en tu pedido cuando el vendedor genera el envío. Entrega coordinada: acuerda el lugar con el vendedor y muestra el NIP solo después de revisar el producto. No confirmes una entrega que todavía no recibiste.</p><p>El plazo depende del vendedor y del servicio elegido. Una estimación de la paquetería puede cambiar.</p></section>
+    <section className="space-y-2"><h2 className="text-xl font-bold">Problemas y cancelaciones</h2><p>En tu pedido, selecciona «Tengo un problema con mi pedido», explica lo ocurrido y adjunta fotos o documentos. Guarda el recibo y la conversación. El vendedor puede responder y RouteFlow puede revisar el caso. El estado y la resolución se consultan en esa misma página.</p><p>Si necesitas cancelar después de pagar, solicita la cancelación al vendedor o abre un caso. No se cancela ni se devuelve dinero automáticamente al cerrar el navegador.</p></section>
+    <section className="space-y-2"><h2 className="text-xl font-bold">Reembolsos</h2><p>Un reembolso puede ser parcial o completo. El recibo muestra el importe confirmado. El tiempo hasta verlo en tu cuenta depende del banco y del medio de pago; una solicitud aún en curso no equivale a dinero devuelto.</p></section>
+    <section className="space-y-2"><h2 className="text-xl font-bold">Acceso al pedido</h2><p>No necesitas crear una cuenta de comprador. Conserva el recibo y guarda el acceso en tu dispositivo desde la página del pedido. Ese acceso es privado: no lo compartas ni lo guardes en un dispositivo público.</p></section>
+  </main>;
+}

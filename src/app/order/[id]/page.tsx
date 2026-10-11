@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ShipmentStatusBadge } from "@/components/ui/Badge";
 import { useI18n } from "@/i18n/LanguageProvider";
-import { readBuyerToken, readBuyerSession } from "@/lib/buyerTokenStore";
+import { readBuyerToken, readBuyerSession, rememberBuyerAccess } from "@/lib/buyerTokenStore";
+import { BuyerNotifications } from "@/components/shared/BuyerNotifications";
 import {
   BuyerReceipt,
   type BuyerReceiptView,
@@ -39,6 +40,8 @@ export default function PublicOrderTrackingPage() {
   const [disputeId, setDisputeId] = useState<string | null>(null);
   const [disputeSubmitted, setDisputeSubmitted] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [remembered, setRemembered] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const loadOrder = useCallback(async () => {
     if (!orderId) return;
@@ -99,8 +102,10 @@ export default function PublicOrderTrackingPage() {
   }
 
   const handleConfirmDelivery = async () => {
+    if (busy) return;
+    setBusy(true);
     setActionError(null);
-
+    try {
     const res = await fetch(
       `/api/orders/${encodeURIComponent(orderId)}/confirm`,
       {
@@ -117,14 +122,17 @@ export default function PublicOrderTrackingPage() {
       setConfirmed(true);
       loadOrder();
     } else {
-      setActionError(t("order.notFound"));
+      setActionError("No se pudo confirmar la entrega. Actualiza el pedido y revisa su estado.");
     }
+    } catch { setActionError("No se pudo conectar. Inténtalo de nuevo."); } finally { setBusy(false); }
   };
 
   const handleDispute = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
+    setBusy(true);
     setActionError(null);
-
+    try {
     const res = await fetch(
       `/api/orders/${encodeURIComponent(orderId)}/dispute`,
       {
@@ -148,8 +156,9 @@ export default function PublicOrderTrackingPage() {
       setShowDispute(false);
       loadOrder();
     } else {
-      setActionError(t("order.notFound"));
+      setActionError("No se pudo abrir el caso. Actualiza el pedido y revisa si ya existe uno.");
     }
+    } catch { setActionError("No se pudo conectar. Inténtalo de nuevo."); } finally { setBusy(false); }
   };
 
   return (
@@ -185,6 +194,14 @@ export default function PublicOrderTrackingPage() {
         </Card>
 
         <BuyerReceipt order={order} />
+        <section className="rounded-xl border bg-white p-4 space-y-2 text-sm">
+          <h2 className="font-bold">Conserva tu recibo</h2>
+          <p>Guarda el acceso solo en tu dispositivo personal. No compartas tu acceso ni tu NIP.</p>
+          <button className="min-h-11 text-blue-700 underline mr-4" onClick={() => { const saved = rememberBuyerAccess(orderId, buyerToken, sessionId); setRemembered(saved); if (!saved) setActionError("Tu navegador no permitió guardar el acceso."); }}>{remembered ? "Acceso guardado en este dispositivo" : "Guardar acceso en este dispositivo"}</button>
+          <button className="min-h-11 text-blue-700 underline" onClick={() => window.print()}>Imprimir / guardar recibo PDF</button>
+          <Link href="/help" className="block text-blue-700 underline">Ayuda, cancelaciones y reembolsos</Link>
+        </section>
+        <BuyerNotifications orderId={orderId} token={buyerToken} sessionId={sessionId} />
 
         {!confirmed &&
           order.canConfirm &&
@@ -193,18 +210,19 @@ export default function PublicOrderTrackingPage() {
             <Card className="p-4 border-emerald-200 bg-emerald-50/40 flex items-center justify-between">
               <div>
                 <p className="font-bold text-xs text-emerald-950">
-                  Did you receive your order?
+                  ¿Ya recibiste tu pedido?
                 </p>
                 <p className="text-[11px] text-emerald-700">
-                  Confirm receipt to complete purchase.
+                  Confirma solo después de recibir y revisar el producto.
                 </p>
               </div>
               <Button
                 variant="success"
                 size="sm"
                 onClick={handleConfirmDelivery}
+                disabled={busy}
               >
-                Yes, I received it
+                Sí, ya lo recibí
               </Button>
             </Card>
           )}
@@ -228,15 +246,9 @@ export default function PublicOrderTrackingPage() {
           <p className="text-xs text-rose-600 font-semibold">{actionError}</p>
         ) : null}
 
+        {disputeId && buyerToken && <DisputeManager id={disputeId} audience="buyer" token={buyerToken} />}
         {order.canDispute && buyerToken && (
           <div className="pt-2 text-center">
-            {disputeId && buyerToken && (
-              <DisputeManager
-                id={disputeId}
-                audience="buyer"
-                token={buyerToken}
-              />
-            )}
             {disputeSubmitted ? (
               <p className="text-xs text-amber-600 font-semibold">
                 {t("order.disputeReported")}
@@ -248,6 +260,7 @@ export default function PublicOrderTrackingPage() {
                 </p>
                 <form onSubmit={handleDispute} className="space-y-2">
                   <select
+                    aria-label="Motivo del problema"
                     className="w-full text-xs p-2 border rounded"
                     value={disputeReason}
                     onChange={(e) => setDisputeReason(e.target.value)}
@@ -258,15 +271,19 @@ export default function PublicOrderTrackingPage() {
                     <option value="damaged_product">
                       {t("status.reason.damaged_product")}
                     </option>
+                    <option value="wrong_product">El producto es diferente</option>
+                    <option value="other">Otro problema / solicitar cancelación</option>
                   </select>
                   <textarea
+                    aria-label="Describe lo ocurrido"
+                    maxLength={1000}
                     className="w-full text-xs p-2 border rounded h-16"
                     placeholder={t("order.disputePlaceholder")}
                     value={disputeDesc}
                     onChange={(e) => setDisputeDesc(e.target.value)}
                     required
                   />
-                  <Button variant="destructive" size="sm" type="submit">
+                  <Button disabled={busy} variant="destructive" size="sm" type="submit">
                     {t("order.disputeSubmit")}
                   </Button>
                 </form>
@@ -276,7 +293,7 @@ export default function PublicOrderTrackingPage() {
                 onClick={() => setShowDispute(true)}
                 className="text-xs text-slate-400 hover:text-rose-600 inline-flex items-center gap-1"
               >
-                <ShieldAlert className="w-3.5 h-3.5" /> {t("order.disputeCta")}
+                <ShieldAlert className="w-3.5 h-3.5" /> Tengo un problema con mi pedido
               </button>
             )}
           </div>

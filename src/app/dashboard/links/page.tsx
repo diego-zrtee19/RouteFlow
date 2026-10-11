@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Copy, Check, ExternalLink } from "lucide-react";
+import { SharePurchaseLink } from "@/components/shared/SharePurchaseLink";
 import { useI18n } from "@/i18n/LanguageProvider";
 import { buildPublicLinkUrl, getConfiguredAppOrigin } from "@/lib/appUrl";
 
@@ -154,7 +155,7 @@ export default function LinksPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <div className="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-mono text-slate-700 select-all">
                     {displayUrl(link.publicId)}
                   </div>
@@ -185,6 +186,7 @@ export default function LinksPage() {
                     </Button>
                   </Link>
                 </div>
+                {link.active && <SharePurchaseLink publicId={link.publicId} />}
               </Card>
             );
           })}

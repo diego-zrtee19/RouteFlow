@@ -1,13 +1,11 @@
 {
   "dashboard.orders.loadError": "No se pudieron actualizar los pedidos. Se reintentará automáticamente.",
   "meta.title": "RouteFlow — La capa de confianza del social commerce",
-  "meta.description": "Cobra con escrow, comparte un link de compra y libera los fondos cuando tu cliente reciba el producto.",
-
+  "meta.description": "Enlaces de compra con pagos por Stripe, seguimiento de pedidos y entregas coordinadas o por FedEx.",
   "language.en": "EN",
   "language.es": "ES",
   "language.label": "Idioma",
   "language.switchTo": "Cambiar idioma a {language}",
-
   "common.back": "Volver",
   "common.cancel": "Cancelar",
   "common.close": "Cerrar",
@@ -47,7 +45,6 @@
   "common.share": "Compartir",
   "common.tryAgain": "Reintentar",
   "common.required": "Este campo es obligatorio",
-
   "nav.howItWorks": "Cómo funciona",
   "nav.sampleProduct": "Producto de ejemplo",
   "nav.sellerDashboard": "Panel de vendedor",
@@ -61,13 +58,11 @@
   "nav.links": "Links",
   "nav.disputes": "Disputas",
   "nav.settings": "Configuración",
-
   "footer.tagline": "© {year} — La capa de confianza del social commerce.",
-
   "landing.hero.tag": "La capa de confianza del social commerce",
   "landing.hero.titlePrefix": "Convierte tus conversaciones en",
   "landing.hero.titleHighlight": "compras confiables.",
-  "landing.hero.subtitle": "Una forma simple para que los vendedores sociales cobren, automaticen envíos con DHL, FedEx o Uber y ofrezcan a sus compradores un checkout verificado y seguro.",
+  "landing.hero.subtitle": "Convierte una conversación en un pedido con pago por Stripe, seguimiento y entrega coordinada o envío con FedEx.",
   "landing.hero.ctaPrimary": "Crear un link de compra",
   "landing.hero.ctaSecondary": "Ver cómo funciona",
   "landing.hero.flowTitle": "El flujo del social commerce",
@@ -76,12 +71,11 @@
   "landing.hero.step2.title": "Link de RouteFlow",
   "landing.hero.step2.sub": "Un clic",
   "landing.hero.step3.title": "Pago con Stripe",
-  "landing.hero.step3.sub": "Tarjeta / Escrow",
-  "landing.hero.step4.title": "DHL / FedEx",
+  "landing.hero.step3.sub": "Pago por tarjeta",
+  "landing.hero.step4.title": "Entrega / FedEx",
   "landing.hero.step4.sub": "Rastreo en vivo",
   "landing.hero.step5.title": "Completado",
   "landing.hero.step5.sub": "El comprador confirma",
-
   "landing.how.eyebrow": "Cómo funciona",
   "landing.how.title": "De un DM al envío en tres pasos",
   "landing.how.step1.title": "Crea tu link",
@@ -89,31 +83,27 @@
   "landing.how.step2.title": "Envíalo donde sea",
   "landing.how.step2.body": "Pégalo en WhatsApp, Instagram o TikTok. Tus compradores abren una página confiable, pensada para móvil.",
   "landing.how.step3.title": "Envía y cobra",
-  "landing.how.step3.body": "Acepta pagos con Stripe, despacha con DHL, FedEx o Uber y da seguimiento hasta completar la entrega.",
-
+  "landing.how.step3.body": "Recibe pagos con Stripe, coordina la entrega o genera un envío con FedEx y sigue el pedido hasta su confirmación.",
   "landing.sellers.title": "Para vendedores sociales",
   "landing.sellers.item1": "Vende en cualquier canal: convierte DMs en checkouts ordenados",
   "landing.sellers.item2": "Cobra de forma segura con la infraestructura de Stripe",
-  "landing.sellers.item3": "Envíos en un clic con DHL, FedEx y Uber Direct",
+  "landing.sellers.item3": "Etiquetas de FedEx y confirmación de entrega por NIP",
   "landing.buyers.title": "Para compradores",
-  "landing.buyers.item1": "Perfil de vendedor verificado y condiciones transparentes",
+  "landing.buyers.item1": "Información del vendedor y condiciones claras de entrega",
   "landing.buyers.item2": "Checkout cifrado sin transferir dinero a desconocidos",
   "landing.buyers.item3": "Rastreo del paquete y confirmación de recepción",
-
   "landing.cta.title": "¿Listo para convertir conversaciones en ventas?",
   "landing.cta.body": "Crea tu primer link de compra en menos de 2 minutos.",
   "landing.cta.button": "Empieza a vender con RouteFlow",
-
   "p.notFoundTitle": "Link de compra no encontrado",
   "p.notFoundBody": "Es posible que este link haya expirado o esté desactivado.",
   "p.goToRouteFlow": "Ir a RouteFlow",
-  "p.verified": "Link de compra verificado",
+  "p.verified": "Pedido con seguimiento",
   "p.availableItem": "Artículo disponible",
   "p.buySecurely": "Comprar de forma segura",
   "p.loading": "Cargando producto...",
-
   "checkout.header": "Checkout de RouteFlow",
-  "checkout.secure": "Cifrado SSL de 256 bits",
+  "checkout.secure": "Pago procesado por Stripe",
   "checkout.buyerInfo": "1. Datos del comprador",
   "checkout.delivery": "2. Método de entrega y dirección",
   "checkout.parcelShipping": "Envío por paquetería",
@@ -132,7 +122,6 @@
   "checkout.cancelledBody": "Tu pago no se completó, así que no se realizó ningún cargo. Puedes intentarlo de nuevo abajo.",
   "checkout.testMode": "Modo de prueba de Stripe",
   "checkout.liveMode": "Modo producción de Stripe",
-
   "checkout.success.verifying": "Verificando tu pago...",
   "checkout.success.pendingTitle": "Pago en proceso",
   "checkout.success.pendingBody": "Stripe recibió tu pago y la confirmación está en camino. Esta página se actualiza automáticamente.",
@@ -140,8 +129,8 @@
   "checkout.success.paidTitle": "¡Gracias por tu compra!",
   "checkout.success.paidBody": "Tu pago fue confirmado. Conserva este recibo para consultar tu entrega.",
   "checkout.success.orderSummary": "Resumen de tu pedido",
-  "checkout.success.escrowTitle": "Fondos retenidos en custodia",
-  "checkout.success.escrowBody": "El monto de tu compra está protegido en una cuenta de custodia segura. No se liberará al vendedor hasta que confirmes que recibiste el producto.",
+  "checkout.success.escrowTitle": "Pago registrado en tu pedido",
+  "checkout.success.escrowBody": "La transferencia al vendedor se procesa después de completar la entrega y revisar los bloqueos del pedido. Consulta tu recibo y reporta cualquier problema desde el pedido.",
   "checkout.success.sellerTitle": "Vendedor notificado",
   "checkout.success.sellerBody": "El vendedor ya recibió la notificación de tu compra y tiene instrucciones para enviar el producto con número de rastreo.",
   "checkout.success.confirmTitle": "Confirmación requerida",
@@ -158,7 +147,6 @@
   "checkout.success.missingOrder": "Falta la referencia del pedido.",
   "checkout.success.failedTitle": "Pago no completado",
   "checkout.success.failedBody": "Stripe no confirmó este pago. Regresa al checkout para intentarlo de nuevo.",
-
   "order.header": "Rastreo RouteFlow",
   "order.notFound": "Pedido no encontrado.",
   "order.completedTitle": "Pedido completado y confirmado",
@@ -177,12 +165,10 @@
   "order.disputeCta": "¿Tienes un problema? Reporta una disputa",
   "order.confirmError": "No pudimos confirmar la entrega. Inténtalo de nuevo.",
   "order.disputeError": "No pudimos enviar la disputa. Inténtalo de nuevo.",
-
   "validation.required": "Este campo es obligatorio",
   "validation.email": "Ingresa un correo electrónico válido",
   "validation.price": "Ingresa un precio válido",
   "validation.server": "Ocurrió un error inesperado. Inténtalo de nuevo.",
-
   "status.CREATED": "Creado",
   "status.PAYMENT_PENDING": "Pago pendiente",
   "status.PAID": "Pagado",
@@ -197,13 +183,11 @@
   "status.REFUND_REQUESTED": "Reembolso solicitado",
   "status.REFUNDED": "Reembolsado",
   "status.DISPUTED": "En disputa",
-
   "status.payment.PENDING": "Pendiente",
   "status.payment.AUTHORIZED": "Autorizado",
   "status.payment.SUCCEEDED": "Exitoso",
   "status.payment.FAILED": "Fallido",
   "status.payment.REFUNDED": "Reembolsado",
-
   "status.shipment.LABEL_CREATED": "Guía creada",
   "status.shipment.PICKED_UP": "Recolectado",
   "status.shipment.IN_TRANSIT": "En tránsito",
@@ -211,17 +195,14 @@
   "status.shipment.DELIVERED": "Entregado",
   "status.shipment.FAILED": "Fallido",
   "status.shipment.CANCELLED": "Cancelado",
-
   "status.dispute.OPEN": "Abierta",
   "status.dispute.UNDER_REVIEW": "En revisión",
   "status.dispute.RESOLVED": "Resuelta",
   "status.dispute.CLOSED": "Cerrada",
-
   "status.reason.product_not_received": "Producto no recibido",
   "status.reason.wrong_product": "Producto equivocado",
   "status.reason.damaged_product": "Producto dañado",
   "status.reason.other": "Otro",
-
   "dashboard.sellerConsole": "Consola del vendedor",
   "dashboard.previewLink": "Ver link público",
   "dashboard.createLink": "+ Crear link",
@@ -241,13 +222,11 @@
   "dashboard.overview.yourLinks": "Tus links de compra",
   "dashboard.overview.noLinks": "Aún no tienes links. Crea tu primer link de compra.",
   "dashboard.overview.recentOrders": "Pedidos recientes",
-
   "dashboard.orders.title": "Pedidos",
   "dashboard.orders.subtitle": "Da seguimiento y cumple las ventas generadas con tus links de RouteFlow.",
   "dashboard.orders.searchPlaceholder": "Buscar comprador, pedido #...",
   "dashboard.orders.empty": "No hay pedidos que coincidan con la búsqueda.",
   "dashboard.orders.orderStatus": "Estado del pedido",
-
   "dashboard.order.backToOrders": "Pedidos",
   "dashboard.order.notFound": "Pedido no encontrado",
   "dashboard.order.backCta": "Volver a pedidos",
@@ -265,7 +244,6 @@
   "dashboard.order.refundError": "No pudimos procesar el reembolso.",
   "dashboard.order.shipError": "No pudimos crear el envío.",
   "dashboard.order.awaitingPayment": "Este pedido está esperando la confirmación de pago de Stripe.",
-
   "dashboard.products.title": "Productos",
   "dashboard.products.subtitle": "Administra tu catálogo y tus links de compra.",
   "dashboard.products.add": "Agregar producto",
@@ -291,7 +269,6 @@
   "productForm.errorAuth": "Tu sesión expiró. Vuelve a iniciar sesión para publicar este enlace.",
   "productForm.errorGeneric": "No pudimos publicar tu enlace. Inténtalo de nuevo.",
   "productForm.errorNetwork": "Error de red. Revisa tu conexión e inténtalo de nuevo.",
-
   "dashboard.newProduct.title": "Crear producto y link",
   "dashboard.newProduct.subtitle": "Genera un link seguro de RouteFlow listo para compartir en Instagram o WhatsApp.",
   "dashboard.newProduct.name": "Nombre del producto",
@@ -306,7 +283,6 @@
   "dashboard.newProduct.readyBody": "Pégalo en tu chat para que tus compradores paguen de inmediato y con confianza.",
   "dashboard.newProduct.previewLink": "Ver link",
   "dashboard.newProduct.publishError": "No pudimos publicar el link para los compradores. Inténtalo de nuevo.",
-
   "dashboard.links.title": "Links de compra",
   "dashboard.links.subtitle": "Links activos de tus productos. Compártelos donde quieras para vender más.",
   "dashboard.links.new": "+ Nuevo link",
@@ -319,9 +295,6 @@
   "dashboard.links.copyError": "No se pudo copiar el enlace. Copialo manualmente.",
   "dashboard.links.toggleError": "No pudimos actualizar el estado del enlace.",
   "dashboard.links.views": "{count} vistas del link",
-
-  "dashboard.links.activate": "Activar",
-  "dashboard.links.deactivate": "Desactivar",
   "dashboard.analytics.title": "Analítica y conversión",
   "dashboard.analytics.subtitle": "Mide el desempeño de tus links de compra en cada canal social.",
   "dashboard.analytics.gmv": "Valor bruto de mercancía",
@@ -333,7 +306,6 @@
   "dashboard.analytics.funnel2": "2. Checkouts iniciados",
   "dashboard.analytics.funnel3": "3. Pagos confirmados (Stripe)",
   "dashboard.analytics.funnel4": "4. Completados y confirmados",
-
   "dashboard.disputes.title": "Disputas y resoluciones",
   "dashboard.disputes.subtitle": "Atiende reclamos y solicitudes de protección al comprador.",
   "dashboard.disputes.emptyTitle": "Historial impecable",
@@ -342,7 +314,6 @@
   "dashboard.disputes.reason": "Motivo:",
   "dashboard.disputes.refund": "Reembolsar con Stripe",
   "dashboard.disputes.refundError": "No pudimos procesar el reembolso.",
-
   "dashboard.settings.title": "Configuración de la tienda",
   "dashboard.settings.subtitle": "Configura tu perfil de vendedor y tu sello público de confianza.",
   "dashboard.settings.businessName": "Nombre del negocio o tienda",
@@ -353,7 +324,6 @@
   "dashboard.settings.saved": "Cambios guardados",
   "dashboard.settings.language": "Idioma preferido",
   "dashboard.settings.languageHint": "Aplica a tu panel y a la experiencia de compra en este navegador.",
-
   "admin.eyebrow": "RouteFlow Master",
   "admin.title": "Administración y sistemas",
   "admin.back": "Volver al panel del vendedor",

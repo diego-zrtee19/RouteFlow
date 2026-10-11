@@ -163,7 +163,7 @@ export default function DashboardOverviewPage() {
     contactEmail: null,
   };
   const orders = data?.orders ?? [];
-  const links = data?.links ?? [];
+  const links = (data?.links ?? []).filter(link => link.active);
   const analytics = data?.analytics ?? {
     linkViews: 0,
     checkoutStarts: 0,

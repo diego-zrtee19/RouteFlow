@@ -19,6 +19,7 @@ const ALLOWED_DELIVERY: readonly string[] = [
 ];
 
 interface CreateProductBody {
+  dimensions?: unknown;
   title?: unknown;
   description?: unknown;
   price?: unknown;
@@ -46,6 +47,7 @@ export async function GET() {
 
   try {
     const admin = getSupabaseAdmin();
+
 
     const [{ data: products }, { data: links }] = await Promise.all([
       admin
@@ -152,6 +154,8 @@ export async function POST(req: NextRequest) {
     ? requestedDelivery
     : ["shipping"];
 
+  if (body.dimensions !== undefined && (!body.dimensions || typeof body.dimensions !== "object" || ["length", "width", "height"].some(k => !Number.isInteger((body.dimensions as Record<string, unknown>)[k]) || Number((body.dimensions as Record<string, unknown>)[k]) < 1 || Number((body.dimensions as Record<string, unknown>)[k]) > 300))) return apiErrorResponse("VALIDATION_ERROR", "Dimensiones enteras de 1 a 300 cm", 400);
+
   if (!title) {
     return apiErrorResponse("VALIDATION_ERROR", "A title is required", 400);
   }
@@ -185,6 +189,7 @@ export async function POST(req: NextRequest) {
         image_url: images[0] ?? null,
         stock,
         weight_kg: weightKg,
+        ...(body.dimensions !== undefined ? { package_dimensions: body.dimensions } : {}),
         is_active: true,
         delivery_options: deliveryOptions,
       })

@@ -72,6 +72,8 @@ export function DisputeManager({
       )}
       {data && (
         <>
+          <p className="font-semibold">Estado del caso: {({ OPEN: "Abierto", UNDER_REVIEW: "En revisión", RESOLVED_BUYER: "Resuelto a favor del comprador", RESOLVED_SELLER: "Resuelto a favor del vendedor", CLOSED: "Cerrado" } as Record<string, string>)[data.dispute.status] ?? data.dispute.status}</p>
+          <p className="text-sm">{data.dispute.description}</p>
           <p>
             Respuesta antes de:{" "}
             {new Date(data.dispute.responseDueAt).toLocaleString("es-MX")}

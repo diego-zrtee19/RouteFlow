@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireSeller } from "@/lib/authz";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { apiErrorResponse } from "@/lib/apiResponse";
+import { readableNotificationBody } from "@/domain/notificationMessage";
 export async function GET() {
   const a = await requireSeller();
   if (!a.ok)
@@ -37,9 +38,8 @@ export async function GET() {
         .limit(15),
       db
         .from("orders")
-        .select("id,order_number,settlement_status,settlement_error")
+        .select("id,order_number,status,delivery_method,settlement_status,settlement_error")
         .eq("seller_id", a.value.id)
-        .eq("status", "COMPLETED")
         .order("created_at", { ascending: false })
         .limit(10),
       db
@@ -75,19 +75,18 @@ export async function GET() {
         },
         {
           label: "Dirección real de origen",
-          done: Boolean(configured && !JSON.stringify(origin).includes("DEMO")),
+          done: shipping.length === 0 || Boolean(configured && !JSON.stringify(origin).toUpperCase().includes("DEMO")),
           href: "/dashboard/settings",
         },
         {
           label: "Primer producto publicado",
           done: (products ?? []).some((p) => p.is_active),
-          href: "/dashboard/products",
+          href: "/dashboard/products/new",
         },
         {
           label: "Peso y dimensiones de productos con envío",
           done:
-            shipping.length > 0 &&
-            shipping.every((p) => p.weight_kg && p.package_dimensions),
+            shipping.every((p) => Number(p.weight_kg) > 0 && p.package_dimensions && ["length", "width", "height"].every(k => Number(p.package_dimensions[k]) > 0)),
           href: "/dashboard/products",
         },
         {
@@ -100,9 +99,10 @@ export async function GET() {
           href: "/dashboard/settings",
         },
       ],
-      notifications: notes ?? [],
+      notifications: (notes ?? []).map(note => ({ ...note, body: readableNotificationBody(note.body) })),
       alerts: alerts ?? [],
-      settlements: orders ?? [],
+      actions: (orders ?? []).filter(o => ["PAID", "READY_TO_SHIP", "DISPUTED"].includes(o.status)).map(o => ({ id: o.id, label: `${o.order_number}: ${o.status === "DISPUTED" ? "Responder al caso" : o.delivery_method === "shipping" ? "Preparar envío / generar etiqueta" : "Coordinar entrega / confirmar NIP"}`, href: o.status === "DISPUTED" ? "/dashboard/disputes" : `/dashboard/orders/${o.id}` })),
+      settlements: (orders ?? []).filter(o => o.status === "COMPLETED"),
       emailDelivery:
         process.env.ROUTEFLOW_EMAIL_DELIVERY === "enabled" &&
         Boolean(process.env.RESEND_API_KEY),

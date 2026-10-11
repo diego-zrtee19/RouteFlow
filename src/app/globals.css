@@ -39,3 +39,9 @@ body {
     display: none;
   }
 }
+
+@media print {
+  header, button, input, select, textarea, nav { display: none !important; }
+  body { background: white !important; }
+  main { max-width: none !important; }
+}

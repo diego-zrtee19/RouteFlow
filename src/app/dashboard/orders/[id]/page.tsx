@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Card } from "@/components/ui/Card";
+import { OrderMoney } from "@/components/dashboard/OrderMoney";
 import { Button } from "@/components/ui/Button";
 import {
   OrderStatusBadge,
@@ -55,6 +56,7 @@ type SellerOrderView = Pick<
   | "items"
   | "createdAt"
 > & {
+  finance: { platformFee: number; settlementStatus: string };
   shipment: {
     id: string;
     carrierName: string;
@@ -120,6 +122,7 @@ function parseSellerOrder(payload: unknown): SellerOrderView | null {
       (row.deliveryMethod as Order["deliveryMethod"]) || "shipping",
     amount: Number(row.amount ?? 0),
     refundedAmount: Number(row.refundedAmount ?? 0),
+    finance: { platformFee: isRecord(row.finance) ? Number(row.finance.platformFee ?? 0) : 0, settlementStatus: isRecord(row.finance) ? str(row.finance, "settlementStatus", "PENDING") : "PENDING" },
     currency: str(row, "currency", "MXN"),
     status: row.status as SellerOrderView["status"],
     paymentStatus: row.paymentStatus as SellerOrderView["paymentStatus"],
@@ -398,6 +401,7 @@ export default function OrderDetailPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
+            <OrderMoney paid={order.paymentStatus === "SUCCEEDED" || order.paymentStatus === "REFUNDED"} total={order.amount} refunded={order.refundedAmount ?? 0} fee={order.finance.platformFee} itemTotal={order.items.reduce((sum, item) => sum + item.lineTotal, 0)} currency={order.currency} settlement={order.finance.settlementStatus} />
             <Card className="p-5">
               <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
                 {t("dashboard.order.item")}

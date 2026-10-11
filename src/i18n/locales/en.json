@@ -1,13 +1,11 @@
 {
   "dashboard.orders.loadError": "Orders could not be refreshed. Retrying automatically.",
   "meta.title": "RouteFlow — The trust layer for social commerce",
-  "meta.description": "Get paid with escrow, share a purchase link, and release funds when your buyer receives the product.",
-
+  "meta.description": "Purchase links with Stripe payments, order tracking and coordinated delivery or FedEx shipping.",
   "language.en": "EN",
   "language.es": "ES",
   "language.label": "Language",
   "language.switchTo": "Switch language to {language}",
-
   "common.back": "Back",
   "common.cancel": "Cancel",
   "common.close": "Close",
@@ -47,7 +45,6 @@
   "common.share": "Share",
   "common.tryAgain": "Try again",
   "common.required": "This field is required",
-
   "nav.howItWorks": "How it works",
   "nav.sampleProduct": "Sample Product",
   "nav.sellerDashboard": "Seller Dashboard",
@@ -61,13 +58,11 @@
   "nav.links": "Links",
   "nav.disputes": "Disputes",
   "nav.settings": "Settings",
-
   "footer.tagline": "© {year} — The Trust Layer for Social Commerce.",
-
   "landing.hero.tag": "The trust layer for social commerce",
   "landing.hero.titlePrefix": "Turn social conversations into",
   "landing.hero.titleHighlight": "trusted purchases.",
-  "landing.hero.subtitle": "A seamless way for social sellers to get paid, automate shipping with DHL, FedEx or Uber, and give buyers a verified, confident checkout experience.",
+  "landing.hero.subtitle": "Turn a conversation into an order with Stripe payments, tracking and coordinated delivery or FedEx shipping.",
   "landing.hero.ctaPrimary": "Create a purchase link",
   "landing.hero.ctaSecondary": "See how it works",
   "landing.hero.flowTitle": "The Social Commerce Flow",
@@ -76,12 +71,11 @@
   "landing.hero.step2.title": "RouteFlow Link",
   "landing.hero.step2.sub": "Single Click",
   "landing.hero.step3.title": "Stripe Pay",
-  "landing.hero.step3.sub": "Card / Escrow",
-  "landing.hero.step4.title": "DHL / FedEx",
+  "landing.hero.step3.sub": "Card payment",
+  "landing.hero.step4.title": "Delivery / FedEx",
   "landing.hero.step4.sub": "Live Tracking",
   "landing.hero.step5.title": "Completed",
   "landing.hero.step5.sub": "Buyer Confirms",
-
   "landing.how.eyebrow": "How It Works",
   "landing.how.title": "From social DM to delivery in three steps",
   "landing.how.step1.title": "Create your link",
@@ -89,31 +83,27 @@
   "landing.how.step2.title": "Send it anywhere",
   "landing.how.step2.body": "Paste in WhatsApp, Instagram, or TikTok. Buyers open a mobile-first trusted page.",
   "landing.how.step3.title": "Ship & get paid",
-  "landing.how.step3.body": "Accept Stripe payments, dispatch via DHL, FedEx, or Uber, and track to completion.",
-
+  "landing.how.step3.body": "Accept Stripe payments, coordinate delivery or generate a FedEx shipment, and track the order through confirmation.",
   "landing.sellers.title": "For Social Sellers",
   "landing.sellers.item1": "Sell anywhere: turn DMs into structured checkouts",
   "landing.sellers.item2": "Get paid securely with Stripe infrastructure",
-  "landing.sellers.item3": "One-click shipping with DHL, FedEx, and Uber Direct",
+  "landing.sellers.item3": "FedEx labels and delivery confirmation with a PIN",
   "landing.buyers.title": "For Buyers",
-  "landing.buyers.item1": "Verified seller profile and transparent terms",
+  "landing.buyers.item1": "Seller information and clear delivery conditions",
   "landing.buyers.item2": "Encrypted checkout without sending money to strangers",
   "landing.buyers.item3": "Package tracking and receipt confirmation",
-
   "landing.cta.title": "Ready to turn conversations into sales?",
   "landing.cta.body": "Set up your first purchase link in less than 2 minutes.",
   "landing.cta.button": "Start selling with RouteFlow",
-
   "p.notFoundTitle": "Purchase Link Not Found",
   "p.notFoundBody": "This link may have expired or been deactivated.",
   "p.goToRouteFlow": "Go to RouteFlow",
-  "p.verified": "Verified Purchase Link",
+  "p.verified": "Order with tracking",
   "p.availableItem": "Available Item",
   "p.buySecurely": "Buy securely",
   "p.loading": "Loading product...",
-
   "checkout.header": "RouteFlow Checkout",
-  "checkout.secure": "256-Bit SSL Encrypted",
+  "checkout.secure": "Payment processed by Stripe",
   "checkout.buyerInfo": "1. Buyer Information",
   "checkout.delivery": "2. Delivery Method & Address",
   "checkout.parcelShipping": "Parcel Shipping",
@@ -132,7 +122,6 @@
   "checkout.cancelledBody": "Your payment was not completed, so no charge was made. You can try again below.",
   "checkout.testMode": "Stripe test mode",
   "checkout.liveMode": "Stripe live mode",
-
   "checkout.success.verifying": "Verifying your payment...",
   "checkout.success.pendingTitle": "Payment processing",
   "checkout.success.pendingBody": "Stripe received your payment and the confirmation is on its way. This page updates automatically.",
@@ -140,8 +129,8 @@
   "checkout.success.paidTitle": "Thank you for your purchase!",
   "checkout.success.paidBody": "Your payment is confirmed. Keep this receipt to track your delivery.",
   "checkout.success.orderSummary": "Your order summary",
-  "checkout.success.escrowTitle": "Funds held in escrow",
-  "checkout.success.escrowBody": "The amount of your purchase is protected in a secure escrow account. It will not be released to the seller until you confirm you received the product.",
+  "checkout.success.escrowTitle": "Payment recorded for your order",
+  "checkout.success.escrowBody": "Seller transfers are processed after delivery completion and checks for order holds. Keep your receipt and report any issue from your order.",
   "checkout.success.sellerTitle": "Seller notified",
   "checkout.success.sellerBody": "The seller has been notified of your purchase and has instructions to ship the product with tracking.",
   "checkout.success.confirmTitle": "Confirmation required",
@@ -158,7 +147,6 @@
   "checkout.success.missingOrder": "Missing order reference.",
   "checkout.success.failedTitle": "Payment not completed",
   "checkout.success.failedBody": "Stripe did not confirm this payment. Go back to the checkout to try again.",
-
   "order.header": "RouteFlow Tracking",
   "order.notFound": "Order not found.",
   "order.completedTitle": "Order Completed & Confirmed",
@@ -177,12 +165,10 @@
   "order.disputeCta": "Having an issue? Report a dispute",
   "order.confirmError": "We could not confirm the delivery. Please try again.",
   "order.disputeError": "We could not submit the dispute. Please try again.",
-
   "validation.required": "This field is required",
   "validation.email": "Enter a valid email address",
   "validation.price": "Enter a valid price",
   "validation.server": "Unexpected error. Please try again.",
-
   "status.CREATED": "Created",
   "status.PAYMENT_PENDING": "Payment Pending",
   "status.PAID": "Paid",
@@ -197,13 +183,11 @@
   "status.REFUND_REQUESTED": "Refund Requested",
   "status.REFUNDED": "Refunded",
   "status.DISPUTED": "Disputed",
-
   "status.payment.PENDING": "Pending",
   "status.payment.AUTHORIZED": "Authorized",
   "status.payment.SUCCEEDED": "Succeeded",
   "status.payment.FAILED": "Failed",
   "status.payment.REFUNDED": "Refunded",
-
   "status.shipment.LABEL_CREATED": "Label Created",
   "status.shipment.PICKED_UP": "Picked Up",
   "status.shipment.IN_TRANSIT": "In Transit",
@@ -211,17 +195,14 @@
   "status.shipment.DELIVERED": "Delivered",
   "status.shipment.FAILED": "Failed",
   "status.shipment.CANCELLED": "Cancelled",
-
   "status.dispute.OPEN": "Open",
   "status.dispute.UNDER_REVIEW": "Under Review",
   "status.dispute.RESOLVED": "Resolved",
   "status.dispute.CLOSED": "Closed",
-
   "status.reason.product_not_received": "Product not received",
   "status.reason.wrong_product": "Wrong product",
   "status.reason.damaged_product": "Damaged product",
   "status.reason.other": "Other",
-
   "dashboard.sellerConsole": "Seller Console",
   "dashboard.previewLink": "Preview public link",
   "dashboard.createLink": "+ Create Link",
@@ -241,13 +222,11 @@
   "dashboard.overview.yourLinks": "Your Purchase Links",
   "dashboard.overview.noLinks": "No links yet. Create your first purchase link.",
   "dashboard.overview.recentOrders": "Recent Orders",
-
   "dashboard.orders.title": "Orders",
   "dashboard.orders.subtitle": "Track and fulfill sales generated via your RouteFlow links.",
   "dashboard.orders.searchPlaceholder": "Search buyer, order #...",
   "dashboard.orders.empty": "No orders found matching criteria.",
   "dashboard.orders.orderStatus": "Order Status",
-
   "dashboard.order.backToOrders": "Orders",
   "dashboard.order.notFound": "Order not found",
   "dashboard.order.backCta": "Back to orders",
@@ -265,7 +244,6 @@
   "dashboard.order.refundError": "We could not process the refund.",
   "dashboard.order.shipError": "We could not create the shipment.",
   "dashboard.order.awaitingPayment": "This order is awaiting Stripe payment confirmation.",
-
   "dashboard.products.title": "Products",
   "dashboard.products.subtitle": "Manage your catalog and purchase links.",
   "dashboard.products.add": "Add Product",
@@ -291,7 +269,6 @@
   "productForm.errorAuth": "Your session expired. Please sign in again to publish this link.",
   "productForm.errorGeneric": "We could not publish your link. Please try again.",
   "productForm.errorNetwork": "Network error. Check your connection and try again.",
-
   "dashboard.newProduct.title": "Create Product & Link",
   "dashboard.newProduct.subtitle": "Generate a secure RouteFlow link ready to share on Instagram DMs or WhatsApp.",
   "dashboard.newProduct.name": "Product Name",
@@ -306,7 +283,6 @@
   "dashboard.newProduct.readyBody": "Paste into your chat to give buyers immediate, trusted checkout.",
   "dashboard.newProduct.previewLink": "Preview Link",
   "dashboard.newProduct.publishError": "The link could not be published for buyers. Please try again.",
-
   "dashboard.links.title": "Purchase Links",
   "dashboard.links.subtitle": "Active links for your products. Share them anywhere to drive sales.",
   "dashboard.links.new": "+ New Link",
@@ -319,9 +295,6 @@
   "dashboard.links.copyError": "Could not copy the link. Please copy it manually.",
   "dashboard.links.toggleError": "We could not update the link status.",
   "dashboard.links.views": "{count} Link views",
-
-  "dashboard.links.activate": "Activate",
-  "dashboard.links.deactivate": "Deactivate",
   "dashboard.analytics.title": "Analytics & Conversion",
   "dashboard.analytics.subtitle": "Track purchase link performance across social channels.",
   "dashboard.analytics.gmv": "Gross Merchandise Value",
@@ -333,7 +306,6 @@
   "dashboard.analytics.funnel2": "2. Checkouts Initiated",
   "dashboard.analytics.funnel3": "3. Payments Confirmed (Stripe)",
   "dashboard.analytics.funnel4": "4. Completed & Confirmed",
-
   "dashboard.disputes.title": "Disputes & Resolutions",
   "dashboard.disputes.subtitle": "Handle buyer protection claims and inquiries.",
   "dashboard.disputes.emptyTitle": "Clean Track Record",
@@ -342,7 +314,6 @@
   "dashboard.disputes.reason": "Reason:",
   "dashboard.disputes.refund": "Refund via Stripe",
   "dashboard.disputes.refundError": "We could not process the refund.",
-
   "dashboard.settings.title": "Store Settings",
   "dashboard.settings.subtitle": "Configure your seller profile and public trust badge.",
   "dashboard.settings.businessName": "Business / Store Name",
@@ -353,7 +324,6 @@
   "dashboard.settings.saved": "Saved Changes",
   "dashboard.settings.language": "Preferred language",
   "dashboard.settings.languageHint": "Applies to your dashboard and to the buyer experience in this browser.",
-
   "admin.eyebrow": "RouteFlow Master",
   "admin.title": "Platform Admin & Systems",
   "admin.back": "Return to Seller Dashboard",
