@@ -16,7 +16,7 @@ Se mantiene el MVP y su autenticación Clerk. Las migraciones de `supabase/migra
 
 Ejecutar en terminales separadas: `npm run dev`, `npm run stripe:listen` y `npm run operations:dev`. El último procesa cada minuto. `scripts/configure-dev-operations.cjs` genera CRON_SECRET únicamente para este proyecto de desarrollo, conservando copia del archivo de entorno y sin imprimir secretos.
 
-En producción `/api/internal/operations` exige `Authorization: Bearer <CRON_SECRET>`. `vercel.json` solicita ejecución cada cinco minutos: esa frecuencia requiere un plan que la admita, o un programador externo equivalente. No se realizó despliegue ni contratación de servicios.
+En producción `/api/internal/operations` exige `Authorization: Bearer <CRON_SECRET>`. `vercel.json` usa ejecución diaria compatible con Hobby para el preview. El lanzamiento requiere cambiar a una frecuencia de cinco minutos en un plan o programador que la admita. No se contrataron servicios.
 
 ## Configuración pendiente externa
 
