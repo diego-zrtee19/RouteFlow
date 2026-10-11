@@ -1,6 +1,34 @@
 # Preparación de producción
 
-No hay un Supabase de producción identificado en esta sesión. El proyecto conectado sigue siendo desarrollo, Stripe está en TEST y FedEx en sandbox. La V2 está desplegada en Vercel Preview; no se activaron pagos reales ni correos a compradores.
+Supabase de producción: `kgoaenzfzkakndkgrwkn`, «RouteFlow Production», en la
+organización RouteFlow y región us-east-1. Se confirmó vacío antes de instalar
+el paquete canónico V3/V5/V6 y las migraciones en una transacción. Tiene 19 tablas
+de RouteFlow (18 públicas y una privada), con RLS y acceso de datos reservado al
+servidor. Se configuraron buckets privados para etiquetas/evidencias y fotos de
+producto públicas de hasta 3 MB. Se retiró el acceso público a la función de RLS
+que Supabase creó automáticamente.
+
+Las cinco suites SQL (comercio, NIP, reembolsos, confiabilidad de webhooks y
+reservas antiguas) pasaron usando service_role, con rollback de todos los fixtures.
+Sellers, products, orders, payments y webhook_events quedaron en cero. Advisors
+no reporta WARN/ERROR; los INFO sobre RLS sin políticas son intencionales para
+tablas que solo usa el servidor. Esto valida la base; no valida pagos Stripe LIVE,
+correo, identidad ni transporte real. No se copiaron datos TEST. No se configura
+un cron LIVE hasta tener una aplicación LIVE verificada y secretos propios.
+
+Las credenciales de Supabase Production y un secreto propio de operaciones están
+en `.env.production.local`, ignorado por Git. `npm run production:verify:database`
+pasó contra la API real: claves del proyecto correctas, acceso del servidor y
+denegación de acceso público a sellers/orders/payments/notification_outbox. Las
+variables de Stripe, Clerk, webhook, correo y transporte LIVE siguen pendientes.
+Las credenciales de producción todavía no se copiaron a Vercel.
+
+El Preview conserva Supabase desarrollo, Stripe TEST y FedEx sandbox. No se
+activaron pagos reales ni correos a compradores. El bootstrap se ejecutó en una
+base recién creada sin usuarios, objetos de Storage ni datos de aplicación; no
+equivale a un respaldo/restauración de una base con ventas. Antes de ventas reales
+falta configurar y probar respaldo y restauración. El esquema se instaló vía SQL
+Editor; conservar el manifiesto local y revisar el historial antes de usar db push.
 
 Actualización 10 de octubre: se configuró Supabase Cron en desarrollo para atender
 el Preview cada cinco minutos, con el secreto en Vault y una función privada.
@@ -8,8 +36,9 @@ El worker local se detuvo. La llamada de verificación devolvió HTTP 200, sin
 errores. Ver `OPERATIONS_HOSTING.md`. La automatización de Preview ya no depende
 del equipo local; producción necesita su propio job y verificación. El propietario
 confirmó que todavía no tiene dominio ni datos reales de origen. Resend no aparece
-conectado y solo existe el Supabase de desarrollo. La consulta de costo para crear
-producción no está disponible; no se creó ni contrató otro proyecto.
+conectado. Inicialmente solo existía el Supabase de desarrollo; el propietario
+creó después RouteFlow Production en el plan Free, tras revisar el costo en el
+navegador. No se contrató un plan de pago.
 
 1. Completar Connect en el sandbox de Stripe, usando la misma cuenta que las claves de RouteFlow. Probar alta, capacidades, transferencia, depósito y reversión. Los acuerdos y datos personales los completa el propietario.
 2. Completar correo del vendedor, dirección real y peso/dimensiones de cada producto. Los datos DEMO no se consideran válidos para lanzar.

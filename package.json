@@ -12,6 +12,7 @@
     "test": "vitest run",
     "operations:dev": "node scripts/operations-worker.cjs",
     "production:preflight": "node scripts/production-preflight.cjs",
+    "production:verify:database": "node scripts/verify-production-database.cjs",
     "production:backup": "node scripts/backup-production.cjs",
     "production:prepare": "node scripts/prepare-production-schema.cjs",
     "stripe:listen": "node scripts/listen-stripe-development.cjs",
