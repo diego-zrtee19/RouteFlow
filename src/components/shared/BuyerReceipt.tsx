@@ -46,7 +46,7 @@ export function BuyerReceipt({ order }: { order: BuyerReceiptView }) {
           {order.deliveryPin ? <>
             <p className="font-mono text-3xl tracking-[0.35em] font-bold text-blue-700" aria-label="NIP de seis dígitos">{order.deliveryPin}</p>
             <p className="text-sm text-slate-600">Muestra este NIP al vendedor únicamente después de recibir y revisar tu producto.</p>
-          </> : <p className="text-sm text-slate-600">{order.status === "COMPLETED" ? "Entrega confirmada. Este NIP ya no está activo." : "El NIP estará disponible cuando se confirme el pago."}</p>}
+          </> : <p className="text-sm text-slate-600">{order.status === "COMPLETED" ? "Entrega confirmada. Este NIP ya no está activo." : order.status === "DISPUTED" ? "El NIP está suspendido mientras el caso está en revisión." : order.status === "REFUNDED" || order.status === "CANCELLED" ? "Este pedido ya no tiene un NIP activo." : "El NIP estará disponible cuando se confirme el pago."}</p>}
         </Card>
       ) : (
         <Card className="p-5 space-y-3">
