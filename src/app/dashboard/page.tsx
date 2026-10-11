@@ -184,6 +184,7 @@ export default function DashboardOverviewPage() {
     <DashboardLayout>
       <StoreReadiness />
       <div className="space-y-6">
+        <section className="grid sm:grid-cols-2 gap-4" aria-label="Dos formas de vender"><Card className="p-5 space-y-3"><h2 className="text-xl font-bold">Venta rápida</h2><p>Vende un artículo: publica foto, precio y entrega, y comparte el enlace con el comprador.</p><Link href="/dashboard/products/new?mode=quick" className="inline-block bg-blue-600 text-white rounded-lg p-3">Crear venta rápida</Link></Card><Card className="p-5 space-y-3"><h2 className="text-xl font-bold">Mi catálogo</h2><p>Comparte tu marca y varios productos. El comprador elige cantidades y paga su carrito junto.</p><Link href="/dashboard/catalogo" className="inline-block border rounded-lg p-3">Preparar / compartir mi catálogo</Link></Card></section>
         {/* Top Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>

@@ -21,6 +21,7 @@ const navigation = [
   { key: "nav.overview", href: "/dashboard", icon: LayoutDashboard },
   { key: "nav.orders", href: "/dashboard/orders", icon: PackageCheck },
   { key: "nav.products", href: "/dashboard/products", icon: ShoppingBag },
+  { key: "Mi catálogo", href: "/dashboard/catalogo", icon: ShoppingBag },
   { key: "nav.links", href: "/dashboard/links", icon: Link2 },
   { key: "nav.analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { key: "nav.disputes", href: "/dashboard/disputes", icon: ShieldAlert },
@@ -295,6 +296,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             {/* Preview only an ACTIVE link belonging to THIS seller. With no
                 link yet there is nothing a buyer could open, so the card points
                 at link creation instead of a dead URL. */}
+            {seller?.storeUsername && <Link href={`/catalogo/${seller.storeUsername}`} target="_blank" rel="noreferrer" className="block text-blue-700 underline min-h-11">Ver mi catálogo</Link>}
             {activeLink ? (
               <Link
                 href={`/p/${activeLink}`}

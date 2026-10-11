@@ -26,8 +26,10 @@ interface PublicLink {
     stock: number;
     active: boolean;
     deliveryOptions: DeliveryMethod[];
+    hasVariants?: boolean;
   };
   seller: {
+    storeUsername: string;
     id: string;
     businessName: string;
     username: string;
@@ -131,6 +133,8 @@ export default function CheckoutPage() {
       </div>
     );
   }
+
+  if (item?.product.hasVariants) return <main className="max-w-xl mx-auto p-6 space-y-4"><h1 className="text-2xl font-bold">Selecciona talla o color</h1><p>Este producto se compra desde el catálogo para reservar la opción correcta.</p><Link href={`/catalogo/${item.seller.storeUsername}`} className="inline-block bg-blue-600 text-white p-3 rounded-lg">Elegir en el catálogo</Link></main>;
 
   if (!item) {
     return (

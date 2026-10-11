@@ -23,6 +23,7 @@ interface PublicLinkPayload {
     images: string[];
     inStock: boolean;
     deliveryOptions: DeliveryMethod[];
+    hasVariants?: boolean;
   };
   seller: {
     storeUsername: string;
@@ -168,7 +169,7 @@ export default function PublicProductPage() {
             <p className="text-sm text-slate-600">{seller.kycVerified ? "Identidad verificada registrada." : "Este vendedor todavía no tiene una verificación de identidad registrada."}</p>
             <PurchaseGuide />
             <div className="hidden md:block pt-2">
-              <Link href={`/checkout/${publicId}`}>
+              <Link href={product.hasVariants ? `/catalogo/${seller.storeUsername}` : `/checkout/${publicId}`}>
                 <Button disabled={!product.inStock} size="lg" className="w-full py-4 text-base font-bold shadow-md">
                   {t("p.buySecurely")}
                   <ArrowRight className="w-4 h-4 ml-1.5" />
@@ -184,7 +185,7 @@ export default function PublicProductPage() {
           <span className="text-xs text-slate-400 block">{t("common.total")}</span>
           <span className="text-xl font-black text-[#0B1220]">${product.price} {product.currency}</span>
         </div>
-        <Link href={`/checkout/${publicId}`} className="flex-1 max-w-[200px]">
+        <Link href={product.hasVariants ? `/catalogo/${seller.storeUsername}` : `/checkout/${publicId}`} className="flex-1 max-w-[200px]">
           <Button disabled={!product.inStock} size="md" className="w-full py-3 font-bold">
             {t("p.buySecurely")}
           </Button>

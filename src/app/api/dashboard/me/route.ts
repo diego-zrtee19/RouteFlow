@@ -116,7 +116,10 @@ export async function PATCH(req: NextRequest) {
     if (body.bio !== undefined) updates.description = String(body.bio).trim();
     if (body.contactEmail !== undefined) updates.contact_email = body.contactEmail;
     if (body.contactPhone !== undefined) updates.contact_phone = body.contactPhone;
-    if (body.logoUrl !== undefined) updates.logo_url = body.logoUrl;
+    if (body.logoUrl !== undefined) {
+      if (typeof body.logoUrl !== "string" || (body.logoUrl && !body.logoUrl.startsWith("https://"))) return apiErrorResponse("VALIDATION_ERROR", "El logo debe usar una URL HTTPS", 400);
+      updates.logo_url = body.logoUrl || null;
+    }
     if (body.instagramHandle !== undefined) updates.instagram_handle = String(body.instagramHandle).trim();
 
     if (Object.keys(updates).length === 0) {

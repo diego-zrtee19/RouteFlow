@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 import { readBuyerToken, storeBuyerSession } from "@/lib/buyerTokenStore";
+import { clearPaidCatalogCart } from "@/lib/catalogCartStore";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useI18n } from "@/i18n/LanguageProvider";
@@ -32,6 +33,7 @@ function SuccessInner() {
   const [testMode, setTestMode] = useState(true);
   const attempts = useRef(0);
   useEffect(() => { if (order?.id && sessionId) storeBuyerSession(order.id, sessionId); }, [order?.id, sessionId]);
+  useEffect(() => { if (phase === "paid" && order?.id) clearPaidCatalogCart(order.id); }, [phase, order?.id]);
 
   // Appended to the tracking link only when the token is actually parked in this
   // tab. sessionStorage is unavailable during SSR, hence the `typeof window`

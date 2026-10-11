@@ -154,7 +154,7 @@ export async function dispatchOrder(
     },
     packageDetails: {
       weightKg,
-      description: order.items[0]?.title ?? "Package",
+      description: order.items.map(item => `${item.title} x${item.quantity}`).join(", ").slice(0, 200) || "Package",
       dimensions: profile?.dimensions ?? undefined,
     },
   };

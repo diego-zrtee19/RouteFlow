@@ -9,6 +9,7 @@ import {
   DEFAULT_STOCK,
 } from "@/repositories/catalogRepository";
 import type { DeliveryMethod } from "@/domain/types";
+import { validateVariants } from "@/domain/catalogCart";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,8 @@ const ALLOWED_DELIVERY: readonly string[] = [
 ];
 
 interface CreateProductBody {
+  catalogVisible?: unknown;
+  variants?: unknown;
   dimensions?: unknown;
   title?: unknown;
   description?: unknown;
@@ -52,7 +55,7 @@ export async function GET() {
     const [{ data: products }, { data: links }] = await Promise.all([
       admin
         .from("products")
-        .select("*")
+        .select("*,product_variants(id,label,price,stock,is_active)")
         .eq("seller_id", auth.value.id)
         .order("created_at", { ascending: false }),
       admin
@@ -78,6 +81,8 @@ export async function GET() {
         currency: product.currency,
         images: product.images ?? [],
         stock: product.stock,
+        catalogVisible: product.catalog_visible,
+        variants: product.product_variants ?? [],
         weightKg: product.weight_kg === null ? null : Number(product.weight_kg),
         dimensions: product.package_dimensions,
         shippingPayer: product.shipping_payer,
@@ -176,6 +181,16 @@ export async function POST(req: NextRequest) {
 
   try {
     const admin = getSupabaseAdmin();
+
+    if (body.catalogVisible !== undefined || body.variants !== undefined) {
+      if (typeof body.catalogVisible !== "boolean") return apiErrorResponse("VALIDATION_ERROR", "Indica si el producto pertenece al catálogo", 400);
+      let variants;
+      try { variants = validateVariants(body.variants ?? []); } catch (error) { return apiErrorResponse("VALIDATION_ERROR", error instanceof Error ? error.message : "Variantes inválidas", 400); }
+      if (!body.catalogVisible && variants.length) return apiErrorResponse("VALIDATION_ERROR", "Las variantes se seleccionan desde el catálogo", 400);
+      const { data, error } = await admin.rpc("publish_catalog_product", { p_seller_id: auth.value.id, p_public_id: generatePublicId(), p_variants: variants, p_product: { title, description: description || null, price: Math.round(price * 100) / 100, currency, images, stock, weight_kg: weightKg, package_dimensions: body.dimensions ?? null, delivery_options: deliveryOptions, catalog_visible: body.catalogVisible } });
+      if (error || !data) throw new DatabaseError("No se pudo publicar el producto y su inventario");
+      return NextResponse.json({ product: { id: data.product.id, title: data.product.title, price: Number(data.product.price), stock: data.product.stock }, link: { id: data.link.id, publicId: data.link.public_id, productId: data.product.id, active: true } }, { status: 201 });
+    }
 
     const { data: product, error: productError } = await admin
       .from("products")
@@ -280,6 +295,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const body = (await req.json().catch(() => ({}))) as {
+    catalogVisible?: unknown;
     linkId?: unknown;
     active?: unknown;
     productId?: unknown;
@@ -287,6 +303,14 @@ export async function PATCH(req: NextRequest) {
     dimensions?: unknown;
     shippingPayer?: unknown;
   };
+
+  if (body.catalogVisible !== undefined) {
+    if (typeof body.catalogVisible !== "boolean" || typeof body.productId !== "string") return apiErrorResponse("VALIDATION_ERROR", "Producto inválido", 400);
+    const { data, error } = await getSupabaseAdmin().from("products").update({ catalog_visible: body.catalogVisible }).eq("id", body.productId).eq("seller_id", auth.value.id).select("id").maybeSingle();
+    if (error) return apiErrorResponse("INTERNAL_ERROR", "No se pudo actualizar el catálogo", 500, error);
+    if (!data) return apiErrorResponse("NOT_FOUND", "Producto no encontrado", 404);
+    return NextResponse.json({ ok: true });
+  }
 
   if (body.productId !== undefined) {
     const productId = typeof body.productId === "string" ? body.productId : "";

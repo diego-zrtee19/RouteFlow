@@ -5,6 +5,7 @@ import {
 } from "@/repositories/purchaseLinkRepository";
 import { recordEvent } from "@/services/orderService";
 import { toPublicPurchaseLinkView } from "@/domain/dto";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 
@@ -53,7 +54,10 @@ export async function GET(
       }),
     ]).catch(() => undefined);
 
-    return NextResponse.json(toPublicPurchaseLinkView(link, product, seller), {
+    const { data: variants, error: variantError } = await getSupabaseAdmin().from("product_variants").select("id").eq("product_id", product.id).eq("is_active", true).limit(1);
+    if (variantError) throw variantError;
+    const view = toPublicPurchaseLinkView(link, product, seller);
+    return NextResponse.json({ ...view, product: { ...view.product, hasVariants: !!variants?.length } }, {
       // Buyer pages are public and shareable: never let a CDN or the browser
       // cache a stale (e.g. freshly created) link lookup.
       headers: { "Cache-Control": "no-store" },
