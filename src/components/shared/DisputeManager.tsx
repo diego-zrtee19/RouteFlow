@@ -25,16 +25,21 @@ export function DisputeManager({
   const [busy, setBusy] = useState(false);
   const headers = token ? { "x-buyer-token": token } : undefined;
   useEffect(() => {
-    fetch(`/api/disputes/${id}`, {
+    const controller = new AbortController();
+    const load = () => fetch(`/api/disputes/${id}`, {
       headers: token ? { "x-buyer-token": token } : undefined,
       cache: "no-store",
+      signal: controller.signal,
     })
       .then(async (r) => {
         const d = await r.json();
         if (!r.ok) throw new Error(d.error?.message || "No se pudo cargar");
-        setData(d);
+        if (!controller.signal.aborted) { setData(d); setError(""); }
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => { if (!controller.signal.aborted) setError(e.message); });
+    void load();
+    const timer = setInterval(() => { if (!document.hidden) void load(); }, 15000);
+    return () => { controller.abort(); clearInterval(timer); };
   }, [id, token]);
   async function send(method: string, body: BodyInit, contentType?: string) {
     setBusy(true);
