@@ -49,6 +49,17 @@ describe('notification delivery boundaries', () => {
     }));
     expect(mocks.update).toHaveBeenCalledWith(expect.objectContaining({status: 'SENT', last_error: null}));
   });
+  it('includes private-order and verified-email recovery links without bearer secrets', async () => {
+    vi.stubEnv('NEXT_PUBLIC_APP_URL', 'https://routeflow.example');
+    mocks.rpc.mockResolvedValue({data: [{...job, order_id: 'test-order'}], error: null});
+    const request = vi.fn().mockResolvedValue(new Response('{}', {status: 200}));
+    vi.stubGlobal('fetch', request);
+    await processNotifications();
+    const text = JSON.parse(request.mock.calls[0][1].body).text;
+    expect(text).toContain('https://routeflow.example/order/test-order');
+    expect(text).toContain('https://routeflow.example/mis-compras');
+    expect(text).not.toContain('token=');
+  });
   it('preserves failed deliveries for retry instead of claiming sent', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', {status: 503})));
     expect(await processNotifications()).toEqual({sent: 0, preview: 0, failed: 1});

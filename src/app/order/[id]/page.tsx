@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { ShipmentStatusBadge } from "@/components/ui/Badge";
 import { useI18n } from "@/i18n/LanguageProvider";
+import { useUser } from "@clerk/nextjs";
 import { readBuyerToken, readBuyerSession, rememberBuyerAccess } from "@/lib/buyerTokenStore";
 import { BuyerNotifications } from "@/components/shared/BuyerNotifications";
 import {
@@ -20,6 +21,8 @@ import {
 type BuyerOrderView = BuyerReceiptView;
 
 export default function PublicOrderTrackingPage() {
+  const { user, isLoaded: identityLoaded } = useUser();
+  const verifiedIdentity = user?.emailAddresses.some(email => email.verification.status === "verified");
   const { t } = useI18n();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -32,6 +35,7 @@ export default function PublicOrderTrackingPage() {
     searchParams?.get("session_id") ?? readBuyerSession(orderId);
 
   const [order, setOrder] = useState<BuyerOrderView | null>(null);
+  const [loadedIdentity, setLoadedIdentity] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [showDispute, setShowDispute] = useState(false);
@@ -43,8 +47,9 @@ export default function PublicOrderTrackingPage() {
   const [remembered, setRemembered] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const loadOrder = useCallback(async () => {
-    if (!orderId) return;
+  const loadOrder = useCallback(async (signal?: AbortSignal) => {
+    if (!orderId || (!buyerToken && !sessionId && !identityLoaded)) return;
+    if (!buyerToken && !sessionId && (!verifiedIdentity || !user?.id)) { setOrder(null); setLoaded(true); return; }
 
     try {
       const query =
@@ -55,13 +60,15 @@ export default function PublicOrderTrackingPage() {
         `/api/orders/${encodeURIComponent(orderId)}${query}`,
         {
           cache: "no-store",
+          signal,
           headers: buyerToken ? { "x-buyer-token": buyerToken } : {},
         },
       );
-      if (res.ok) {
+      if (res.ok && !signal?.aborted) {
         const data = await res.json();
         if (data?.order) {
           setOrder(data.order as BuyerOrderView);
+          setLoadedIdentity(user?.id ?? null);
           if (data.order.dispute?.id) {
             setDisputeId(data.order.dispute.id);
             setDisputeSubmitted(true);
@@ -69,31 +76,32 @@ export default function PublicOrderTrackingPage() {
           if ((data.order as BuyerOrderView).status === "COMPLETED")
             setConfirmed(true);
         }
-      }
+      } else if (!signal?.aborted) { setOrder(null); }
     } catch {
       /* leave order null; the not-found state renders below */
     } finally {
-      setLoaded(true);
+      if (!signal?.aborted) setLoaded(true);
     }
-  }, [orderId, buyerToken, sessionId]);
+  }, [orderId, buyerToken, sessionId, identityLoaded, verifiedIdentity, user?.id]);
 
   useEffect(() => {
-    loadOrder();
+    const controller = new AbortController();
+    loadOrder(controller.signal);
     const timer = setInterval(() => {
-      if (!document.hidden) loadOrder();
+      if (!document.hidden) loadOrder(controller.signal);
     }, 10000);
-    return () => clearInterval(timer);
+    return () => { controller.abort(); clearInterval(timer); };
   }, [loadOrder]);
 
   if (loaded && !order) {
     return (
       <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
-        <p>{t("order.notFound")}</p>
+        <div className="max-w-md space-y-4 text-center"><h1 className="text-xl font-bold">Recupera el acceso a tu pedido</h1><p>El número de pedido no permite ver información privada. Entra con el correo que usaste al comprar para consultar tu recibo y pedir ayuda.</p><Link href="/mis-compras" className="inline-block bg-blue-600 text-white rounded-lg p-3">Recuperar mis compras</Link><Link href="/help" className="block underline">Ayuda</Link></div>
       </div>
     );
   }
 
-  if (!order) {
+  if (!order || (!buyerToken && !sessionId && loadedIdentity !== (user?.id ?? null))) {
     return (
       <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
         <p className="text-slate-400">…</p>
@@ -200,12 +208,13 @@ export default function PublicOrderTrackingPage() {
           <button className="min-h-11 text-blue-700 underline mr-4" onClick={() => { const saved = rememberBuyerAccess(orderId, buyerToken, sessionId); setRemembered(saved); if (!saved) setActionError("Tu navegador no permitió guardar el acceso."); }}>{remembered ? "Acceso guardado en este dispositivo" : "Guardar acceso en este dispositivo"}</button>
           <button className="min-h-11 text-blue-700 underline" onClick={() => window.print()}>Imprimir / guardar recibo PDF</button>
           <Link href="/help" className="block text-blue-700 underline">Ayuda, cancelaciones y reembolsos</Link>
+          <Link href="/mis-compras" className="block text-blue-700 underline min-h-11">Mis compras / recuperar acceso desde otro dispositivo</Link>
         </section>
         <BuyerNotifications orderId={orderId} token={buyerToken} sessionId={sessionId} />
 
         {!confirmed &&
           order.canConfirm &&
-          buyerToken &&
+          (buyerToken || verifiedIdentity) &&
           order.deliveryMethod === "shipping" && (
             <Card className="p-4 border-emerald-200 bg-emerald-50/40 flex items-center justify-between">
               <div>
@@ -246,8 +255,8 @@ export default function PublicOrderTrackingPage() {
           <p className="text-xs text-rose-600 font-semibold">{actionError}</p>
         ) : null}
 
-        {disputeId && buyerToken && <DisputeManager id={disputeId} audience="buyer" token={buyerToken} />}
-        {order.canDispute && buyerToken && (
+        {disputeId && (buyerToken || verifiedIdentity) && <DisputeManager id={disputeId} audience="buyer" token={buyerToken ?? undefined} />}
+        {order.canDispute && (buyerToken || verifiedIdentity) && (
           <div className="pt-2 text-center">
             {disputeSubmitted ? (
               <p className="text-xs text-amber-600 font-semibold">
@@ -291,7 +300,7 @@ export default function PublicOrderTrackingPage() {
             ) : (
               <button
                 onClick={() => setShowDispute(true)}
-                className="text-xs text-slate-400 hover:text-rose-600 inline-flex items-center gap-1"
+                className="min-h-11 rounded-lg border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 hover:bg-rose-50 inline-flex items-center gap-2"
               >
                 <ShieldAlert className="w-3.5 h-3.5" /> Tengo un problema con mi pedido
               </button>

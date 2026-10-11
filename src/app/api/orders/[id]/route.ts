@@ -8,6 +8,7 @@ import { loadOrderContext } from "@/repositories/orderRepository";
 import { toBuyerOrderView } from "@/domain/dto";
 import type { Order } from "@/domain/types";
 import { getBuyerDeliveryPin } from "@/services/deliveryService";
+import { findOrderForBuyerIdentity, getVerifiedBuyerEmails } from "@/lib/buyerIdentity";
 
 export const runtime = "nodejs";
 
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // is itself an unguessable capability, and it is bound to exactly one order
   // via `client_reference_id`, so it is accepted as an equivalent credential —
   // but ONLY after Stripe itself confirms the binding.
-  if (!presentedToken && !sessionId) {
+  if (!presentedToken && !sessionId && !(await getVerifiedBuyerEmails()).length) {
     return apiErrorResponse("UNAUTHENTICATED", "Buyer token required", 401);
   }
 
@@ -45,8 +46,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     if (presentedToken) {
       order = await findOrderForBuyer(id, presentedToken);
-    } else {
+    } else if (sessionId) {
       order = await findOrderByStripeSessionForBuyer(id, sessionId);
+    } else {
+      order = await findOrderForBuyerIdentity(id);
     }
 
     // Indistinguishable from an unknown id, on purpose.

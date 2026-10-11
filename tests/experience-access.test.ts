@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 const mocks = vi.hoisted(() => ({ seller: vi.fn(), buyer: vi.fn(), session: vi.fn(), db: vi.fn() }));
 vi.mock("@/lib/authz", () => ({ requireSeller: mocks.seller }));
+vi.mock("@/lib/buyerIdentity", () => ({ getVerifiedBuyerEmails: async () => [], findOrderForBuyerIdentity: async () => null }));
 vi.mock("@/services/orderService", () => ({ findOrderForBuyer: mocks.buyer, findOrderByStripeSessionForBuyer: mocks.session }));
 vi.mock("@/lib/supabaseAdmin", () => ({ getSupabaseAdmin: mocks.db }));
 import { GET as notifications } from "@/app/api/orders/[id]/notifications/route";

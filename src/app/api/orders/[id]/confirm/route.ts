@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { findOrderForBuyer, transitionOrder } from "@/services/orderService";
 import { apiErrorResponse } from "@/lib/apiResponse";
+import { findOrderForBuyerIdentity, getVerifiedBuyerEmails, sameOriginBuyerAction } from "@/lib/buyerIdentity";
 
 export const runtime = "nodejs";
 
@@ -30,12 +31,12 @@ export async function POST(
     req.headers.get("x-buyer-token") ??
     (typeof body?.token === "string" ? body.token : null);
 
-  if (!presentedToken) {
+  if (!presentedToken && (!sameOriginBuyerAction(req) || !(await getVerifiedBuyerEmails()).length)) {
     return apiErrorResponse("UNAUTHENTICATED", "Buyer token required", 401);
   }
 
   try {
-    const order = await findOrderForBuyer(id, presentedToken);
+    const order = presentedToken ? await findOrderForBuyer(id, presentedToken) : await findOrderForBuyerIdentity(id);
 
     // Same response for "no such order" and "wrong token": do not leak existence.
     if (!order) {

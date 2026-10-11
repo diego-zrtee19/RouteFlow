@@ -4,6 +4,7 @@ import { findOrderForBuyer } from "@/repositories/orderRepository";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { apiErrorResponse } from "@/lib/apiResponse";
 import { resolveDispute } from "@/services/disputeService";
+import { findOrderForBuyerIdentity, sameOriginBuyerAction } from "@/lib/buyerIdentity";
 async function access(req: NextRequest, id: string) {
   const db = getSupabaseAdmin();
   const { data: d, error } = await db
@@ -19,6 +20,7 @@ async function access(req: NextRequest, id: string) {
       return { dispute: d, audience: "buyer" };
     return null;
   }
+  if (req.headers.get("x-routeflow-audience") === "buyer" && (req.method === "GET" || sameOriginBuyerAction(req)) && await findOrderForBuyerIdentity(d.order_id)) return { dispute: d, audience: "buyer" };
   const seller = await requireSeller();
   if (seller.ok && seller.value.id === d.orders?.seller_id)
     return { dispute: d, audience: "seller" };

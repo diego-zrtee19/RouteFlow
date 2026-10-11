@@ -232,6 +232,7 @@ function SuccessInner() {
             </Card>
 
             <BuyerReceipt order={order} />
+            <Card className="p-5 space-y-2"><h2 className="font-bold">Encuentra esta compra cuando la necesites</h2><p className="text-sm">Entra a Mis compras con el correo que usaste al pagar. Podrás recuperar el seguimiento desde otro dispositivo y pedir ayuda. Comprar no requiere registrarte.</p><Link href="/mis-compras" className="inline-block text-blue-700 underline min-h-11">Mis compras / recuperar acceso</Link></Card>
 
             <p className="text-center text-xs text-slate-400">
               {t("checkout.success.questions", { email: supportEmail })}
@@ -251,7 +252,7 @@ function SuccessInner() {
               rel="noreferrer"
               className="flex-1"
             >
-                <Button className="w-full">{t("checkout.success.viewOrder")}</Button>
+                <Button className="w-full">Seguir mi pedido</Button>
               </Link>
               <Link href="/" className="flex-1">
                 <Button variant="secondary" className="w-full">

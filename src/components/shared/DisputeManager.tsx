@@ -23,11 +23,11 @@ export function DisputeManager({
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const headers = token ? { "x-buyer-token": token } : undefined;
+  const headers = { "x-routeflow-audience": audience, ...(token ? { "x-buyer-token": token } : {}) };
   useEffect(() => {
     const controller = new AbortController();
     const load = () => fetch(`/api/disputes/${id}`, {
-      headers: token ? { "x-buyer-token": token } : undefined,
+      headers: { "x-routeflow-audience": audience, ...(token ? { "x-buyer-token": token } : {}) },
       cache: "no-store",
       signal: controller.signal,
     })
@@ -40,7 +40,7 @@ export function DisputeManager({
     void load();
     const timer = setInterval(() => { if (!document.hidden) void load(); }, 15000);
     return () => { controller.abort(); clearInterval(timer); };
-  }, [id, token]);
+  }, [id, token, audience]);
   async function send(method: string, body: BodyInit, contentType?: string) {
     setBusy(true);
     setError("");

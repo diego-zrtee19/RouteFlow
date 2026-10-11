@@ -12,7 +12,7 @@ export const Navbar: React.FC = () => {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/60">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 min-h-16 flex flex-wrap gap-2 py-2 items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[#0B1220] flex items-center justify-center text-white font-bold text-base">
             RF
@@ -27,6 +27,7 @@ export const Navbar: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+          <Link href="/mis-compras" className="text-sm font-semibold text-blue-700 min-h-11 inline-flex items-center">Mis compras</Link>
           <LanguageSwitcher />
           <Link href="/dashboard" className="hidden sm:block">
             <Button variant="secondary" size="sm">{t("nav.dashboard")}</Button>
@@ -58,6 +59,7 @@ export const Footer: React.FC = () => {
           <span className="text-xs text-slate-400">{t("footer.tagline", { year: new Date().getFullYear() })}</span>
         </div>
         <div className="flex items-center gap-6 text-xs text-slate-600">
+          <Link href="/mis-compras">Mis compras</Link>
           <Link href="/dashboard" className="hover:text-slate-900">{t("nav.dashboard")}</Link>
           <Link href="/dashboard/orders" className="hover:text-slate-900">{t("nav.orders")}</Link>
           <Link href="/dashboard/analytics" className="hover:text-slate-900">{t("nav.analytics")}</Link>

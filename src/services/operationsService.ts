@@ -50,7 +50,7 @@ export async function processNotifications() {
           from: process.env.ROUTEFLOW_EMAIL_FROM,
           to: [job.recipient],
           subject: job.subject,
-          text: `${readableNotificationBody(job.body)}\n\n${notificationMessage(job.kind, job.audience)}`,
+          text: `${readableNotificationBody(job.body)}\n\n${notificationMessage(job.kind, job.audience)}${job.audience === "buyer" && process.env.NEXT_PUBLIC_APP_URL ? `\n\nSeguir mi pedido: ${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")}/order/${job.order_id}\nRecupera el acceso con el correo de tu compra: ${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")}/mis-compras` : ""}`,
         }),
       });
       if (!response.ok)
