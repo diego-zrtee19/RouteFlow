@@ -196,14 +196,6 @@ export default function OrderDetailPage() {
   const [deliveryBusy, setDeliveryBusy] = useState(false);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
 
-  // The API returns `items`, not the flattened `product` the old store used.
-  const product = order?.items?.[0]
-    ? {
-        title: order.items[0].title,
-        images: order.items[0].imageUrl ? [order.items[0].imageUrl] : [],
-      }
-    : undefined;
-
   const refreshServerOrder = useCallback(async () => {
     try {
       const res = await fetch(
@@ -406,11 +398,11 @@ export default function OrderDetailPage() {
               <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
                 {t("dashboard.order.item")}
               </p>
-              <div className="flex items-start gap-4">
+              {order.items.map(item => <div key={item.id} className="flex items-start gap-4 mb-4 last:mb-0">
                 <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
-                  {product?.images?.[0] ? (
+                  {item.imageUrl ? (
                     <Image
-                      src={product.images[0]}
+                      src={item.imageUrl}
                       alt=""
                       width={64}
                       height={64}
@@ -420,13 +412,13 @@ export default function OrderDetailPage() {
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-[#0B1220]">
-                    {product?.title}
+                    {item.title}
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    ${order.amount} {order.currency}
+                    Cantidad: {item.quantity} · ${item.unitPrice.toFixed(2)} por unidad · ${item.lineTotal.toFixed(2)} {order.currency}
                   </p>
                 </div>
-              </div>
+              </div>)}
             </Card>
 
             <Card className="p-5">
