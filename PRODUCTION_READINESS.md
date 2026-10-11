@@ -21,7 +21,14 @@ en `.env.production.local`, ignorado por Git. `npm run production:verify:databas
 pasó contra la API real: claves del proyecto correctas, acceso del servidor y
 denegación de acceso público a sellers/orders/payments/notification_outbox. Las
 variables de Stripe, Clerk, webhook, correo y transporte LIVE siguen pendientes.
-Las credenciales de producción todavía no se copiaron a Vercel.
+Con autorización explícita del propietario, la URL, la clave pública y la clave
+privada de Supabase Production se guardaron solo en el entorno Production del
+proyecto `route-flow` en Vercel. La clave privada es Secret; URL/clave pública y
+referencia del proyecto están cifradas. Se comprobó el alcance con la API de
+Vercel. Las variables existentes de Preview se mantienen. No se redeployó la
+aplicación Production ni se activaron pagos, correo o transporte LIVE. El secreto
+de operaciones propio de Production sigue únicamente local hasta configurar su
+endpoint y programador.
 
 El Preview conserva Supabase desarrollo, Stripe TEST y FedEx sandbox. No se
 activaron pagos reales ni correos a compradores. El bootstrap se ejecutó en una
