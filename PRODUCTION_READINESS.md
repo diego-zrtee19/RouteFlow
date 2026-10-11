@@ -2,6 +2,15 @@
 
 No hay un Supabase de producción identificado en esta sesión. El proyecto conectado sigue siendo desarrollo, Stripe está en TEST y FedEx en sandbox. La V2 está desplegada en Vercel Preview; no se activaron pagos reales ni correos a compradores.
 
+Actualización 10 de octubre: se configuró Supabase Cron en desarrollo para atender
+el Preview cada cinco minutos, con el secreto en Vault y una función privada.
+El worker local se detuvo. La llamada de verificación devolvió HTTP 200, sin
+errores. Ver `OPERATIONS_HOSTING.md`. La automatización de Preview ya no depende
+del equipo local; producción necesita su propio job y verificación. El propietario
+confirmó que todavía no tiene dominio ni datos reales de origen. Resend no aparece
+conectado y solo existe el Supabase de desarrollo. La consulta de costo para crear
+producción no está disponible; no se creó ni contrató otro proyecto.
+
 1. Completar Connect en el sandbox de Stripe, usando la misma cuenta que las claves de RouteFlow. Probar alta, capacidades, transferencia, depósito y reversión. Los acuerdos y datos personales los completa el propietario.
 2. Completar correo del vendedor, dirección real y peso/dimensiones de cada producto. Los datos DEMO no se consideran válidos para lanzar.
 3. Crear o identificar un Supabase de producción separado. Preparar `.env.production.local`, sin subirlo a Git, con sus claves, Stripe LIVE, Clerk LIVE, FedEx LIVE, dominio HTTPS y secretos del proceso automático.
