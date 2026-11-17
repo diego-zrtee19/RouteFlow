@@ -26,8 +26,7 @@ export function ConnectSetup() {
     try {
       const r = await fetch("/api/dashboard/connect", { method: "POST" });
       const d = await r.json();
-      if (!r.ok || !d.url)
-        throw new Error(d.error?.message || "No se pudo iniciar el alta");
+      if (!r.ok || !d.url) throw new Error(d.error?.message || "No se pudo iniciar el alta");
       window.location.assign(d.url);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
@@ -35,11 +34,11 @@ export function ConnectSetup() {
     }
   }
   return (
-    <section className="bg-white border rounded-xl p-5 space-y-3">
-      <h2 className="font-bold">Recibe tus fondos con Stripe</h2>
+    <section className="bg-white border rounded-lg p-5 space-y-3">
+      <h2 className="font-semibold">Recibe tus fondos con Stripe</h2>
       <p className="text-sm">
-        Completa la verificación y registra tu cuenta bancaria en Stripe. Los
-        pedidos completados se transfieren cuando tu cuenta está habilitada.
+        Completa la verificación y registra tu cuenta bancaria en Stripe. Los pedidos completados se
+        transfieren cuando tu cuenta está habilitada.
       </p>
       {status && (
         <p>
@@ -52,9 +51,7 @@ export function ConnectSetup() {
         </p>
       )}
       {status?.requirements.length ? (
-        <p className="text-sm">
-          Stripe solicita: {status.requirements.join(", ")}
-        </p>
+        <p className="text-sm">Stripe solicita: {status.requirements.join(", ")}</p>
       ) : null}
       {error && (
         <p role="alert" className="text-rose-700">
@@ -64,7 +61,7 @@ export function ConnectSetup() {
       <button
         onClick={connect}
         disabled={busy}
-        className="bg-blue-600 text-white rounded-sm px-4 py-2 disabled:opacity-50"
+        className="bg-accent-700 text-white rounded-sm px-4 py-2 disabled:opacity-50"
       >
         {busy
           ? "Abriendo Stripe…"

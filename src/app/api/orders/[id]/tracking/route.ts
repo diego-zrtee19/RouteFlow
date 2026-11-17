@@ -9,9 +9,9 @@ import {
   type TrackingAccess,
 } from "@/lib/trackingAuthz";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { ShippingRegistry } from "@/providers/shipping";
+import { refreshTracking } from "@/services/shipmentService";
 import { toBuyerShipmentView } from "@/domain/dto";
-import type { Order, Shipment, ShipmentEvent, ShippingProviderType } from "@/domain/types";
+import type { Order, Shipment, ShipmentEvent } from "@/domain/types";
 import type { ErrorCode } from "@/lib/errors";
 
 export const runtime = "nodejs";
@@ -35,8 +35,7 @@ export const runtime = "nodejs";
 async function buildCaller(req: NextRequest): Promise<TrackingCaller> {
   const body = (await req.json().catch(() => ({}))) as { token?: unknown };
   const buyerToken =
-    req.headers.get("x-buyer-token") ??
-    (typeof body?.token === "string" ? body.token : null);
+    req.headers.get("x-buyer-token") ?? (typeof body?.token === "string" ? body.token : null);
 
   const user = await requireUserId();
   if (!user.ok) {
@@ -58,7 +57,7 @@ async function buildCaller(req: NextRequest): Promise<TrackingCaller> {
  */
 async function loadAuthorizedOrder(
   id: string,
-  caller: TrackingCaller
+  caller: TrackingCaller,
 ): Promise<{ order: Order | null; access: TrackingAccess }> {
   if (caller.seller) {
     const order = await findOrderForSeller(id, caller.seller);
@@ -105,10 +104,7 @@ function rowToShipment(row: Record<string, unknown>): Shipment {
  *
  * Read-only. Returns a DTO that contains no buyer PII.
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   try {
@@ -123,40 +119,40 @@ export async function GET(
     }
 
     const admin = getSupabaseAdmin();
-    const { data: shipment } = await admin
+    const { data: shipment, error: shipmentError } = await admin
       .from("shipments")
       .select("*")
       .eq("order_id", order.id)
       .maybeSingle();
 
+    if (shipmentError) throw shipmentError;
     if (!shipment) {
       return NextResponse.json({ ok: true, shipment: null, events: [] });
     }
 
-    const { data: events } = await admin
+    const { data: events, error: eventsError } = await admin
       .from("shipment_events")
       .select("*")
       .eq("shipment_id", shipment.id)
       .order("occurred_at", { ascending: false })
       .limit(20);
 
+    if (eventsError) throw eventsError;
     const list = (events ?? []) as Record<string, unknown>[];
 
     return NextResponse.json({
       ok: true,
       shipment: toBuyerShipmentView(
         rowToShipment(shipment),
-        list.map(
-          (event): ShipmentEvent => ({
-            id: String(event.id),
-            shipmentId: String(event.shipment_id),
-            status: event.status as ShipmentEvent["status"],
-            description: String(event.description ?? ""),
-            location: (event.location as string) ?? null,
-            occurredAt: String(event.occurred_at),
-            createdAt: String(event.created_at ?? new Date().toISOString()),
-          })
-        )
+        list.map((event): ShipmentEvent => ({
+          id: String(event.id),
+          shipmentId: String(event.shipment_id),
+          status: event.status as ShipmentEvent["status"],
+          description: String(event.description ?? ""),
+          location: (event.location as string) ?? null,
+          occurredAt: String(event.occurred_at),
+          createdAt: String(event.created_at ?? new Date().toISOString()),
+        })),
       ),
       events: list.map((event) => ({
         status: event.status,
@@ -179,10 +175,7 @@ export async function GET(
  * days ago could be reported as still in transit. A carrier failure is now a
  * 502, never a false success.
  */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   try {
@@ -199,64 +192,14 @@ export async function POST(
       return apiErrorResponse(access.code as ErrorCode, access.reason, access.status);
     }
 
-    const admin = getSupabaseAdmin();
-    const { data: shipment } = await admin
-      .from("shipments")
-      .select("*")
-      .eq("order_id", order.id)
-      .maybeSingle();
-
-    if (!shipment) {
-      return apiErrorResponse("NOT_FOUND", "This order has no shipment yet", 404);
-    }
-
-    const provider = ShippingRegistry.getProvider(
-      shipment.provider as ShippingProviderType
-    );
-
-    if (!provider.isConfigured()) {
-      return apiErrorResponse(
-        "NOT_CONFIGURED",
-        `${provider.name} is not configured, so tracking cannot be refreshed`,
-        503
-      );
-    }
-
-    const tracking = await provider.getTracking(shipment.tracking_number);
-
-    await admin.from("shipments").update({ status: tracking.status }).eq("id", shipment.id);
-
-    if (Array.isArray(tracking.events) && tracking.events.length > 0) {
-      // UNIQUE(shipment_id, status, occurred_at) makes repeated polls of the
-      // same carrier scan a no-op rather than a growing duplicate list.
-      //
-      // The carrier interface names this field `timestamp`; the domain model
-      // calls it `occurredAt`, because that is when the carrier observed the
-      // event, not when we happened to poll.
-      await admin.from("shipment_events").upsert(
-        tracking.events.map((event) => ({
-          shipment_id: shipment.id,
-          status: event.status,
-          description: event.description,
-          location: event.location ?? null,
-          occurred_at: event.timestamp,
-        })),
-        { onConflict: "shipment_id,status,occurred_at", ignoreDuplicates: true }
-      );
-    }
-
-    return NextResponse.json({
-      ok: true,
-      status: tracking.status,
-      carrier: tracking.carrier,
-      estimatedDelivery: tracking.estimatedDelivery ?? null,
-    });
+    const tracking = await refreshTracking(order);
+    return NextResponse.json({ ok: true, ...tracking });
   } catch (error) {
     return apiErrorResponse(
       "INTERNAL_ERROR",
       "Could not refresh tracking from the carrier",
       502,
-      error
+      error,
     );
   }
 }

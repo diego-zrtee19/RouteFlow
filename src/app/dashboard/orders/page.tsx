@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { buttonStyles } from "@/components/ui/Button";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/ui/Badge";
 import { ArrowRight, Search } from "lucide-react";
 import { useI18n } from "@/i18n/LanguageProvider";
@@ -80,22 +80,33 @@ export default function OrdersPage() {
   // Keep the last successful list if a subsequent refresh fails.
   useEffect(() => {
     let cancelled = false;
-    const refresh = () => fetch("/api/dashboard/orders", { cache: "no-store" })
-      .then((res) => { if (!res.ok) throw new Error("Orders request failed"); return res.json(); })
-      .then((data) => {
-        if (!cancelled) { setOrders(parseDashboardOrders(data)); setLoadError(false); }
-      })
-      .catch(() => { if (!cancelled) setLoadError(true); })
-      .finally(() => { if (!cancelled) setLoaded(true); });
+    const refresh = () =>
+      fetch("/api/dashboard/orders", { cache: "no-store" })
+        .then((res) => {
+          if (!res.ok) throw new Error("Orders request failed");
+          return res.json();
+        })
+        .then((data) => {
+          if (!cancelled) {
+            setOrders(parseDashboardOrders(data));
+            setLoadError(false);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setLoadError(true);
+        })
+        .finally(() => {
+          if (!cancelled) setLoaded(true);
+        });
     refresh();
-    const timer = setInterval(() => { if (!document.hidden) refresh(); }, 5000);
+    const timer = setInterval(() => {
+      if (!document.hidden) refresh();
+    }, 5000);
     return () => {
       cancelled = true;
       clearInterval(timer);
     };
   }, []);
-
-  
 
   const filteredOrders = orders.filter((o) => {
     const matchesFilter = filter === "ALL" ? true : o.status === filter;
@@ -111,22 +122,20 @@ export default function OrdersPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-extrabold text-[#0B1220]">{t("dashboard.orders.title")}</h1>
+            <h1 className="text-2xl font-semibold text-ink">{t("dashboard.orders.title")}</h1>
             <p className="text-sm text-slate-500">{t("dashboard.orders.subtitle")}</p>
           </div>
         </div>
 
         {/* Filter bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-slate-200">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200">
           <div className="flex items-center gap-2 overflow-x-auto">
             {["ALL", "PAID", "READY_TO_SHIP", "IN_TRANSIT", "DELIVERED", "COMPLETED"].map((st) => (
               <button
                 key={st}
                 onClick={() => setFilter(st)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
-                  filter === st
-                    ? "bg-[#0B1220] text-white"
-                    : "text-slate-600 hover:bg-slate-100"
+                  filter === st ? "bg-accent-700 text-white" : "text-slate-600 hover:bg-slate-100"
                 }`}
               >
                 {t(st === "ALL" ? "common.all" : `status.${st}`)}
@@ -135,23 +144,27 @@ export default function OrdersPage() {
           </div>
 
           <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
             <input
               type="text"
               placeholder={t("dashboard.orders.searchPlaceholder")}
-              className="pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg w-full sm:w-60 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+              className="pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg w-full sm:w-60 focus:outline-hidden focus:ring-1 focus:ring-accent-500"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
         </div>
 
-        {loadError && <p role="alert" className="text-sm text-rose-600">{t("dashboard.orders.loadError")}</p>}
+        {loadError && (
+          <p role="alert" className="text-sm text-rose-600">
+            {t("dashboard.orders.loadError")}
+          </p>
+        )}
         {/* Orders Table */}
         <Card className="p-0 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
+              <thead className="bg-slate-50 text-[11px] font-medium text-slate-500 border-b border-slate-200">
                 <tr>
                   <th className="py-3.5 px-4">{t("common.order")}</th>
                   <th className="py-3.5 px-4">{t("common.buyer")}</th>
@@ -165,22 +178,26 @@ export default function OrdersPage() {
               <tbody className="divide-y divide-slate-100">
                 {filteredOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400">
-                      {!loaded ? t("common.loading") : loadError ? t("dashboard.orders.loadError") : t("dashboard.orders.empty")}
+                    <td colSpan={7} className="py-12 text-center text-slate-500">
+                      {!loaded
+                        ? t("common.loading")
+                        : loadError
+                          ? t("dashboard.orders.loadError")
+                          : t("dashboard.orders.empty")}
                     </td>
                   </tr>
                 ) : (
                   filteredOrders.map((order) => (
                     <tr key={order.id} className="hover:bg-slate-50/70">
-                      <td className="py-3.5 px-4 font-bold text-[#0B1220]">{order.orderNumber}</td>
+                      <td className="py-3.5 px-4 font-bold text-ink">{order.orderNumber}</td>
                       <td className="py-3.5 px-4">
-                        <div className="font-medium text-[#0B1220]">{order.buyerName}</div>
-                        <div className="text-xs text-slate-400">{order.buyerPhone}</div>
+                        <div className="font-medium text-ink">{order.buyerName}</div>
+                        <div className="text-xs text-slate-500">{order.buyerPhone}</div>
                       </td>
                       <td className="py-3.5 px-4 text-slate-700 max-w-[200px] truncate">
                         {order.product?.title}
                       </td>
-                      <td className="py-3.5 px-4 font-semibold text-[#0B1220]">
+                      <td className="py-3.5 px-4 font-semibold text-ink">
                         ${order.amount} {order.currency}
                       </td>
                       <td className="py-3.5 px-4">
@@ -190,10 +207,11 @@ export default function OrdersPage() {
                         <OrderStatusBadge status={order.status} />
                       </td>
                       <td className="py-3.5 px-4 text-right">
-                        <Link href={`/dashboard/orders/${order.id}`}>
-                          <Button variant="outline" size="sm">
-                            {t("common.manage")} <ArrowRight className="w-3.5 h-3.5 ml-1" />
-                          </Button>
+                        <Link
+                          href={`/dashboard/orders/${order.id}`}
+                          className={buttonStyles({ variant: "outline", size: "sm" })}
+                        >
+                          {t("common.manage")} <ArrowRight className="w-3.5 h-3.5 ml-1" />
                         </Link>
                       </td>
                     </tr>
@@ -207,4 +225,3 @@ export default function OrdersPage() {
     </DashboardLayout>
   );
 }
-

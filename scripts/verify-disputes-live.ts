@@ -4,10 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { createOrderFromPurchaseLink } from "@/repositories/orderRepository";
 import { resolveDispute } from "@/services/disputeService";
 async function main() {
-  assert.equal(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    "https://xnnkcgzijlpwxnvarqng.supabase.co",
-  );
+  assert.equal(process.env.NEXT_PUBLIC_SUPABASE_URL, "https://xnnkcgzijlpwxnvarqng.supabase.co");
   const db = getSupabaseAdmin();
   const run = randomUUID().slice(0, 8);
   let sellerId: string | undefined,
@@ -102,11 +99,7 @@ async function main() {
     disputeId = (await opened.json()).disputeId;
     const disputeUrl = `http://localhost:3000/api/disputes/${disputeId}`;
     assert.equal((await fetch(disputeUrl)).status, 404);
-    assert.equal(
-      (await fetch(disputeUrl, { headers: { "x-buyer-token": "wrong" } }))
-        .status,
-      404,
-    );
+    assert.equal((await fetch(disputeUrl, { headers: { "x-buyer-token": "wrong" } })).status, 404);
     const form = new FormData();
     form.append(
       "file",
@@ -130,16 +123,8 @@ async function main() {
     assert.equal(file.status, 200);
     assert.ok((await file.text()).startsWith("%PDF-"));
     const fakeForm = new FormData();
-    fakeForm.append(
-      "file",
-      new Blob(["not a pdf"], { type: "application/pdf" }),
-      "bad.pdf",
-    );
-    assert.equal(
-      (await fetch(disputeUrl, { method: "PUT", headers, body: fakeForm }))
-        .status,
-      400,
-    );
+    fakeForm.append("file", new Blob(["not a pdf"], { type: "application/pdf" }), "bad.pdf");
+    assert.equal((await fetch(disputeUrl, { method: "PUT", headers, body: fakeForm })).status, 400);
     assert.equal(
       (
         await fetch(disputeUrl, {
@@ -150,17 +135,8 @@ async function main() {
       ).status,
       401,
     );
-    await resolveDispute(
-      disputeId!,
-      "release",
-      "TEST: seller evidence accepted",
-      "fixture-admin",
-    );
-    const { data: restored } = await db
-      .from("orders")
-      .select("status")
-      .eq("id", orderId)
-      .single();
+    await resolveDispute(disputeId!, "release", "TEST: seller evidence accepted", "fixture-admin");
+    const { data: restored } = await db.from("orders").select("status").eq("id", orderId).single();
     assert.equal(restored?.status, "PAID");
     console.log(
       "PASS: buyer authorization, atomic dispute, private evidence, invalid file rejection, admin authorization, resolution restores order",
@@ -172,9 +148,7 @@ async function main() {
         .select("storage_path")
         .eq("dispute_id", disputeId);
       if (files?.length)
-        await db.storage
-          .from("dispute-evidence")
-          .remove(files.map((f) => f.storage_path));
+        await db.storage.from("dispute-evidence").remove(files.map((f) => f.storage_path));
     }
     if (orderId) {
       await db.from("events").delete().eq("order_id", orderId);

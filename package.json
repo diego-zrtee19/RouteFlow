@@ -19,7 +19,16 @@
     "production:backup:verify": "node scripts/verify-backup-artifact.cjs",
     "production:prepare": "node scripts/prepare-production-schema.cjs",
     "stripe:listen": "node scripts/listen-stripe-development.cjs",
-    "webhook:verify:automatic": "node scripts/verify-test-checkout-event.cjs --automatic"
+    "webhook:verify:automatic": "node scripts/verify-test-checkout-event.cjs --automatic",
+    "format": "prettier --write . --ignore-unknown",
+    "format:check": "prettier --check . --ignore-unknown",
+    "typecheck": "tsc --project tsconfig.check.json --noEmit",
+    "test:cache": "node --test tests/next-cache.test.cjs",
+    "check": "npm run repository:check && npm run format:check && npm run lint && npm run typecheck && npm test && npm run test:cache && npm run test:scripts",
+    "repository:check": "node scripts/check-repository.cjs",
+    "predev:fresh": "node scripts/prepare-next-cache.cjs --dev --reset",
+    "dev:fresh": "next dev",
+    "test:scripts": "node --test tests/backup-artifact.test.cjs tests/production-plan.test.cjs tests/production-services.test.cjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.2",
@@ -28,7 +37,7 @@
     "@supabase/supabase-js": "^2.116.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.48.0",
-    "next": "15.5.27",
+    "next": "15.5.28",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-leaflet": "^5.0.0",
@@ -38,25 +47,32 @@
   "overrides": {
     "postcss": "$postcss",
     "postcss-selector-parser": "7.1.6",
-    "@next/eslint-plugin-next": {
-      ".": "14.2.35",
-      "glob": "10.5.0"
-    }
+    "minimatch": "11.0.1"
   },
   "devDependencies": {
     "@eslint/compat": "2.1.1",
-    "@eslint/eslintrc": "3.3.7",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^4.7.0",
-    "eslint": "^9.17.0",
-    "eslint-config-next": "15.5.27",
+    "eslint": "9.39.5",
     "postcss": "^8.5.29",
+    "prettier": "3.9.10",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.7.2",
-    "vitest": "5.0.3"
+    "vitest": "5.0.3",
+    "@next/eslint-plugin-next": "15.5.28",
+    "@typescript-eslint/parser": "8.72.1",
+    "@typescript-eslint/eslint-plugin": "8.72.1",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-import": "2.32.0",
+    "globals": "14.0.0"
+  },
+  "engines": {
+    "node": "^22.12.0 || ^24.0.0"
   }
 }

@@ -1,6 +1,6 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { retryOnTransientSupabaseError, isTransientSupabaseError } from "@/lib/supabaseRetry";
+import { retryOnTransientSupabaseError } from "@/lib/supabaseRetry";
 import { slugifyUsername } from "@/lib/reserved";
 import type { ErrorCode } from "@/lib/errors";
 import type { Seller } from "@/domain/types";
@@ -31,8 +31,7 @@ import type { Seller } from "@/domain/types";
  * the dashboard try to onboard a seller against a database it could not reach.
  */
 export type AuthzResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; status: 401 | 403 | 500; code: ErrorCode };
+  { ok: true; value: T } | { ok: false; status: 401 | 403 | 500; code: ErrorCode };
 
 const unauthorized = (): AuthzResult<never> => ({
   ok: false,
@@ -102,27 +101,8 @@ export async function requireSeller(): Promise<AuthzResult<Seller>> {
   try {
     seller = await findSellerByUserId(user.value);
   } catch (error) {
-    /*
-     * This function must never throw.
-     *
-     * It previously let a Supabase failure escape, which surfaced as an
-     * unhandled 500. The dashboard's onboarding branch triggers on 403, so a
-     * transient database blip stranded the user on a permanent loader with no
-     * store and no way forward.
-     *
-     * A failure to REACH the database is not the same as "you have no store",
-     * and the two must not be conflated: reporting SELLER_NOT_FOUND here would
-     * make the client try to create a seller against a database it cannot
-     * reach. So the distinction is preserved in the status code:
-     *
-     *   - token/clock problems -> 401, the session could not be validated
-     *   - anything else       -> 500, a real backend fault worth alerting on
-     */
-    if (isTransientSupabaseError(error)) {
-      console.error("[routeflow] seller lookup failed on a transient Supabase error:", error);
-      return { ok: false, status: 401, code: "UNAUTHENTICATED" };
-    }
-
+    // Clerk already authenticated the caller. A database/network or service-key
+    // failure does not invalidate that session and must not trigger sign-in again.
     console.error("[routeflow] seller lookup failed:", error);
     return { ok: false, status: 500, code: "INTERNAL_ERROR" };
   }
@@ -163,7 +143,7 @@ export async function findSellerByUserId(userId: string): Promise<Seller | null>
  */
 export function assertSellerOwns(
   seller: Seller,
-  resourceSellerId: string | null | undefined
+  resourceSellerId: string | null | undefined,
 ): AuthzResult<Seller> {
   if (!resourceSellerId || resourceSellerId !== seller.id) {
     return { ok: false, status: 403, code: "NOT_RESOURCE_OWNER" };

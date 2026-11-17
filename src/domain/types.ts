@@ -213,7 +213,6 @@ export interface OrderItem {
 
 export type PaymentProvider = "stripe";
 
-
 // --------------------------------------------------------------------------
 // Shipment
 // --------------------------------------------------------------------------
@@ -279,11 +278,7 @@ export interface ShipmentEvent {
 
 export type DisputeStatus = "OPEN" | "UNDER_REVIEW" | "RESOLVED" | "CLOSED";
 
-export type DisputeReason =
-  | "product_not_received"
-  | "wrong_product"
-  | "damaged_product"
-  | "other";
+export type DisputeReason = "product_not_received" | "wrong_product" | "damaged_product" | "other";
 
 export interface Dispute {
   id: string;

@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { findOrderForBuyer, transitionOrder } from "@/services/orderService";
+import { AppError } from "@/lib/errors";
 import { apiErrorResponse } from "@/lib/apiResponse";
-import { findOrderForBuyerIdentity, getVerifiedBuyerEmails, sameOriginBuyerAction } from "@/lib/buyerIdentity";
+import {
+  findOrderForBuyerIdentity,
+  getVerifiedBuyerEmails,
+  sameOriginBuyerAction,
+} from "@/lib/buyerIdentity";
 
 export const runtime = "nodejs";
 
@@ -20,23 +25,24 @@ export const runtime = "nodejs";
  * field, so it can be sent as a header (preferred; headers are not logged in
  * URLs) by the buyer's tracking page.
  */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const body = (await req.json().catch(() => ({}))) as { token?: unknown };
   const presentedToken =
-    req.headers.get("x-buyer-token") ??
-    (typeof body?.token === "string" ? body.token : null);
+    req.headers.get("x-buyer-token") ?? (typeof body?.token === "string" ? body.token : null);
 
-  if (!presentedToken && (!sameOriginBuyerAction(req) || !(await getVerifiedBuyerEmails()).length)) {
+  if (
+    !presentedToken &&
+    (!sameOriginBuyerAction(req) || !(await getVerifiedBuyerEmails()).length)
+  ) {
     return apiErrorResponse("UNAUTHENTICATED", "Buyer token required", 401);
   }
 
   try {
-    const order = presentedToken ? await findOrderForBuyer(id, presentedToken) : await findOrderForBuyerIdentity(id);
+    const order = presentedToken
+      ? await findOrderForBuyer(id, presentedToken)
+      : await findOrderForBuyerIdentity(id);
 
     // Same response for "no such order" and "wrong token": do not leak existence.
     if (!order) {
@@ -49,14 +55,20 @@ export async function POST(
 
     // transitionOrder enforces the state machine, so a paid-but-unshipped
     // order cannot jump straight to COMPLETED.
-    await transitionOrder(order, "BUYER_CONFIRMED");
-    const completed = await transitionOrder(
-      { ...order, status: "BUYER_CONFIRMED" },
-      "COMPLETED"
-    );
+    if (order.status === "COMPLETED")
+      return NextResponse.json({ ok: true, orderNumber: order.orderNumber });
+    if (!["DELIVERED", "BUYER_CONFIRMED"].includes(order.status))
+      return apiErrorResponse(
+        "CONFLICT",
+        "Confirma después de que el pedido figure como entregado",
+        409,
+      );
+    const confirmed = await transitionOrder(order, "BUYER_CONFIRMED");
+    const completed = await transitionOrder(confirmed, "COMPLETED");
 
     return NextResponse.json({ ok: true, orderNumber: completed.orderNumber });
   } catch (error) {
+    if (error instanceof AppError) return apiErrorResponse(error.code, error.message, error.status);
     return apiErrorResponse("INTERNAL_ERROR", "Could not confirm delivery", 500, error);
   }
 }

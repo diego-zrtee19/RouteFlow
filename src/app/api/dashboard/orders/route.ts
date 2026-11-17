@@ -80,10 +80,21 @@ export async function GET(req: NextRequest) {
       }
 
       const shipments = await shipmentsForOrders([order.id]);
-      const { data: settlement, error: settlementError } = await getSupabaseAdmin().from("orders").select("settlement_status").eq("id", order.id).eq("seller_id", auth.value.id).single();
+      const { data: settlement, error: settlementError } = await getSupabaseAdmin()
+        .from("orders")
+        .select("settlement_status")
+        .eq("id", order.id)
+        .eq("seller_id", auth.value.id)
+        .single();
       if (settlementError) throw settlementError;
       return NextResponse.json({
-        order: { ...toSellerOrderView(order, shipments.get(order.id) ?? null), finance: { platformFee: order.platformFee, settlementStatus: settlement?.settlement_status ?? "PENDING" } },
+        order: {
+          ...toSellerOrderView(order, shipments.get(order.id) ?? null),
+          finance: {
+            platformFee: order.platformFee,
+            settlementStatus: settlement?.settlement_status ?? "PENDING",
+          },
+        },
       });
     }
 

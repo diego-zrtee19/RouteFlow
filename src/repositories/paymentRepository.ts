@@ -23,58 +23,43 @@ export interface UpsertPaymentInput {
 export async function upsertPayment(input: UpsertPaymentInput): Promise<Payment> {
   const admin = getSupabaseAdmin();
 
-  // Match on whichever Stripe identifier we have; both are UNIQUE.
-  const filter = input.paymentIntentId
-    ? { payment_intent_id: input.paymentIntentId }
-    : input.checkoutSessionId
-      ? { checkout_session_id: input.checkoutSessionId }
-      : { order_id: input.orderId };
-
-  const { data: updated, error: updateError } = await admin
-    .from("payments")
-    .update({
-      status: input.status,
-      amount: input.amount,
-      currency: input.currency,
-    })
-    .eq(input.paymentIntentId ? "payment_intent_id" : "checkout_session_id",
-        (input.paymentIntentId ?? input.checkoutSessionId) as string)
-    .select()
-    .maybeSingle();
-
-  if (updateError) {
-    throw new DatabaseError(`Could not update the payment: ${updateError.message}`);
+  // Binding a freshly created Checkout must not downgrade a payment that a
+  // concurrent webhook already completed or refunded. Only the atomic payment
+  // RPC owns financial state changes; this insert never updates existing rows.
+  if (!input.checkoutSessionId || input.status !== "PENDING") {
+    throw new DatabaseError("Checkout binding requires a pending session");
   }
-  if (updated) return rowToPayment(updated as Record<string, unknown>);
-  void filter;
-
-  const { data: created, error } = await admin
-    .from("payments")
-    .insert({
+  const { error } = await admin.from("payments").upsert(
+    {
       order_id: input.orderId,
       provider: "stripe",
       checkout_session_id: input.checkoutSessionId,
       payment_intent_id: input.paymentIntentId,
       amount: input.amount,
       currency: input.currency,
-      status: input.status,
-    })
-    .select()
+      status: "PENDING",
+    },
+    { onConflict: "checkout_session_id", ignoreDuplicates: true },
+  );
+  if (error) throw new DatabaseError(`Could not bind the payment: ${error.message}`);
+  const { data, error: readError } = await admin
+    .from("payments")
+    .select("*")
+    .eq("checkout_session_id", input.checkoutSessionId)
+    .eq("order_id", input.orderId)
     .single();
-
-  if (error || !created) {
-    // A concurrent webhook may have inserted the same session first; that row
-    // is authoritative, so re-read rather than fail.
-    const { data: raced } = await admin
-      .from("payments")
-      .select("*")
-      .eq("order_id", input.orderId)
-      .maybeSingle();
-    if (raced) return rowToPayment(raced as Record<string, unknown>);
-    throw new DatabaseError(`Could not create the payment: ${error?.message ?? "unknown"}`);
+  if (
+    readError ||
+    !data ||
+    Number(data.amount) !== input.amount ||
+    String(data.currency).toUpperCase() !== input.currency.toUpperCase() ||
+    (input.paymentIntentId &&
+      data.payment_intent_id &&
+      data.payment_intent_id !== input.paymentIntentId)
+  ) {
+    throw new DatabaseError("Checkout payment binding does not match this order");
   }
-
-  return rowToPayment(created as Record<string, unknown>);
+  return rowToPayment(data as Record<string, unknown>);
 }
 
 export async function listPaymentsForOrder(orderId: string): Promise<Payment[]> {

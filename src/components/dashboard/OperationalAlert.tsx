@@ -16,14 +16,11 @@ export function OperationalAlert({ alert }: { alert: AlertView }) {
     if (!alert.order_id || !choice) return;
     setBusy(true);
     try {
-      const r = await fetch(
-        `/api/dashboard/reservations/${alert.order_id}/recover`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ restoreStock: choice === "restore" }),
-        },
-      );
+      const r = await fetch(`/api/dashboard/reservations/${alert.order_id}/recover`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ restoreStock: choice === "restore" }),
+      });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error?.message || "No se pudo recuperar");
       setResolved(true);
@@ -38,10 +35,7 @@ export function OperationalAlert({ alert }: { alert: AlertView }) {
     <article className="border border-amber-200 bg-amber-50 rounded-sm p-3 space-y-2">
       <p>{resolved ? "Reserva recuperada" : alert.message}</p>
       {alert.order_id && (
-        <Link
-          className="text-blue-700 underline"
-          href={`/dashboard/orders/${alert.order_id}`}
-        >
+        <Link className="text-accent-700 underline" href={`/dashboard/orders/${alert.order_id}`}>
           Revisar pedido
         </Link>
       )}
@@ -56,9 +50,7 @@ export function OperationalAlert({ alert }: { alert: AlertView }) {
               onChange={(e) => setChoice(e.target.value)}
             >
               <option value="">Selecciona después de revisar tu stock</option>
-              <option value="restore">
-                Sí: cancelar y devolver las unidades
-              </option>
+              <option value="restore">Sí: cancelar y devolver las unidades</option>
               <option value="keep">No: cancelar sin cambiar el stock</option>
             </select>
           </label>

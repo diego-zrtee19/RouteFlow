@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/authz";
 import { isStripeConfigured, isStripeWebhookConfigured, isStripeTestMode } from "@/lib/stripe";
 import AdminConsole from "./AdminConsole";
@@ -25,11 +24,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminConsolePage() {
   const admin = await requireAdmin();
 
-  if (!admin.ok) {
-    // Not a redirect to /sign-in: the user IS authenticated, they just lack
-    // the role. 403 semantics, expressed by refusing to render.
-    redirect("/dashboard?error=forbidden_admin");
-  }
+  if (!admin.ok) return null; // The layout presents sign-in or restricted access.
 
   // Counts and per-seller aggregates only — no buyer PII in the admin payload.
   const data = await getAdminDashboardData();
@@ -46,4 +41,3 @@ export default async function AdminConsolePage() {
     />
   );
 }
-

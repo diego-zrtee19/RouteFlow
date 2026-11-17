@@ -49,9 +49,13 @@ export async function getAdminDashboardData(): Promise<{ stats: AdminStats }> {
     admin.from("sellers").select("id", { count: "exact", head: true }),
     admin.from("products").select("id", { count: "exact", head: true }),
     admin.from("orders").select("id", { count: "exact", head: true }),
-    admin.from("disputes").select("id", { count: "exact", head: true }),
+    admin
+      .from("disputes")
+      .select("id", { count: "exact", head: true })
+      .in("status", ["OPEN", "UNDER_REVIEW"]),
   ]);
 
+  for (const result of [sellers, products, orders, disputes]) if (result.error) throw result.error;
   return {
     stats: {
       activeSellers: sellers.count ?? 0,

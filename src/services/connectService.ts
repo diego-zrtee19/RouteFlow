@@ -11,8 +11,7 @@ export async function saveConnectAccount(account: Stripe.Account) {
       stripe_payouts_enabled: account.payouts_enabled,
       stripe_requirements: account.requirements?.currently_due ?? [],
       kyc_status:
-        account.details_submitted &&
-        account.capabilities?.transfers === "active"
+        account.details_submitted && account.capabilities?.transfers === "active"
           ? "verified"
           : "pending",
     })
@@ -22,9 +21,7 @@ export async function saveConnectAccount(account: Stripe.Account) {
 export async function connectStatus(sellerId: string) {
   const { data, error } = await getSupabaseAdmin()
     .from("sellers")
-    .select(
-      "stripe_account_id,stripe_transfers_enabled,stripe_payouts_enabled,stripe_requirements",
-    )
+    .select("stripe_account_id,stripe_transfers_enabled,stripe_payouts_enabled,stripe_requirements")
     .eq("id", sellerId)
     .single();
   if (error) throw error;
@@ -44,12 +41,10 @@ async function refreshRecipient(accountId: string) {
   const account = await getStripe().v2.core.accounts.retrieve(accountId, {
     include: ["configuration.recipient", "requirements"],
   });
-  const balance =
-    account.configuration?.recipient?.capabilities?.stripe_balance;
+  const balance = account.configuration?.recipient?.capabilities?.stripe_balance;
   const transfersEnabled = balance?.stripe_transfers?.status === "active";
   const payoutsEnabled = balance?.payouts?.status === "active";
-  const requirements =
-    account.requirements?.entries?.map((e) => e.description) ?? [];
+  const requirements = account.requirements?.entries?.map((e) => e.description) ?? [];
   const { error } = await getSupabaseAdmin()
     .from("sellers")
     .update({
@@ -74,7 +69,9 @@ export async function startConnect(sellerId: string, origin: string, verifiedEma
   if (!accountId) {
     const contactEmail = s.contact_email?.trim() || verifiedEmail?.trim();
     if (!contactEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
-      throw new ValidationError("Guarda un correo de contacto válido en Ajustes antes de conectar Stripe.");
+      throw new ValidationError(
+        "Guarda un correo de contacto válido en Ajustes antes de conectar Stripe.",
+      );
     }
     const account = await getStripe().v2.core.accounts.create(
       {
@@ -137,15 +134,10 @@ export async function settleCompletedOrder(orderId: string) {
       .single();
     if (pError || !p?.payment_intent_id)
       throw new Error("No hay un pago confirmado para transferir");
-    const intent = await getStripe().paymentIntents.retrieve(
-      p.payment_intent_id,
-    );
+    const intent = await getStripe().paymentIntents.retrieve(p.payment_intent_id);
     const charge =
-      typeof intent.latest_charge === "string"
-        ? intent.latest_charge
-        : intent.latest_charge?.id;
-    if (intent.status !== "succeeded" || !charge)
-      throw new Error("Stripe no confirma el cobro");
+      typeof intent.latest_charge === "string" ? intent.latest_charge : intent.latest_charge?.id;
+    if (intent.status !== "succeeded" || !charge) throw new Error("Stripe no confirma el cobro");
     const account = await refreshRecipient(claim.account_id);
     if (!account.transfersEnabled || !account.payoutsEnabled)
       throw new Error("La cuenta necesita completar su verificación");
@@ -193,8 +185,7 @@ export async function settleCompletedOrder(orderId: string) {
       .from("orders")
       .update({
         settlement_status: "FAILED",
-        settlement_error:
-          error instanceof Error ? error.message : "Transferencia pendiente",
+        settlement_error: error instanceof Error ? error.message : "Transferencia pendiente",
       })
       .eq("id", orderId);
     throw error;
@@ -217,9 +208,7 @@ export async function prepareRefund(orderId: string) {
       limit: 100,
     });
     if (history.has_more || history.data.length > 1)
-      throw new Error(
-        "Reconciliación de transferencias requerida antes del reembolso",
-      );
+      throw new Error("Reconciliación de transferencias requerida antes del reembolso");
     const transfer = history.data[0];
     if (transfer && transfer.metadata.order_id !== orderId)
       throw new Error("La transferencia no coincide con el pedido");

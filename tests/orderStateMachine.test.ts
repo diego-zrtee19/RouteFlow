@@ -57,9 +57,7 @@ describe("illegal transitions", () => {
   it("REJECTS completing an order that was never shipped", () => {
     // The defect the audit described: status could be written directly.
     expect(canTransition("PAID", "COMPLETED")).toBe(false);
-    expect(() => assertTransition("PAID", "COMPLETED")).toThrow(
-      InvalidOrderTransitionError
-    );
+    expect(() => assertTransition("PAID", "COMPLETED")).toThrow(InvalidOrderTransitionError);
   });
 
   it("REJECTS confirming delivery before delivery", () => {

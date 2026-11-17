@@ -1,3 +1,4 @@
+import { guardPublicRequest, readPublicJson, publicRequestError } from "@/lib/publicRequestGuard";
 import { NextRequest, NextResponse } from "next/server";
 import { StripeNotConfiguredError } from "@/lib/stripe";
 import { CheckoutError, verifyCheckoutSessionById } from "@/services/checkoutService";
@@ -18,7 +19,8 @@ export const runtime = "nodejs";
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => ({}));
+    await guardPublicRequest(req, "verify");
+    const body = (await readPublicJson(req)) as { session_id?: unknown } | null;
     const sessionId = typeof body?.session_id === "string" ? body.session_id.trim() : "";
     if (!sessionId) {
       return NextResponse.json({ error: "missing_session_id" }, { status: 400 });
@@ -35,6 +37,8 @@ export async function POST(req: NextRequest) {
       testMode: result.testMode,
     });
   } catch (error) {
+    const guarded = publicRequestError(error);
+    if (guarded) return guarded;
     if (error instanceof CheckoutError) {
       return NextResponse.json({ error: error.code }, { status: error.status });
     }

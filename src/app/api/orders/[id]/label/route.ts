@@ -14,10 +14,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const shipment = await findShipmentByOrder(id);
   if (!shipment?.labelUrl) return apiErrorResponse("NOT_FOUND", "Etiqueta no disponible", 404);
   if (shipment.labelUrl.startsWith("https://")) return NextResponse.redirect(shipment.labelUrl);
-  const { data, error } = await getSupabaseAdmin().storage.from("shipping-labels").download(`${id}.pdf`);
+  const { data, error } = await getSupabaseAdmin()
+    .storage.from("shipping-labels")
+    .download(`${id}.pdf`);
   if (error || !data) return apiErrorResponse("NOT_FOUND", "Etiqueta no disponible", 404);
-  return new Response(await data.arrayBuffer(), { headers: {
-    "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="${order.orderNumber}.pdf"`,
-    "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
-  } });
+  return new Response(await data.arrayBuffer(), {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `inline; filename="${order.orderNumber}.pdf"`,
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }

@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  toBuyerOrderView,
-  toPublicPurchaseLinkView,
-  toSellerOrderView,
-} from "@/domain/dto";
+import { toBuyerOrderView, toPublicPurchaseLinkView, toSellerOrderView } from "@/domain/dto";
 import type { PurchaseLink, Shipment } from "@/domain/types";
 import { TEST_PRODUCT, TEST_SELLER_A, makeOrder } from "./fixtures";
 
@@ -94,7 +90,7 @@ describe("public purchase link DTO", () => {
     };
 
     const serialised = JSON.stringify(
-      toPublicPurchaseLinkView(link, TEST_PRODUCT, sellerWithDocument)
+      toPublicPurchaseLinkView(link, TEST_PRODUCT, sellerWithDocument),
     );
 
     expect(view.seller.kycVerified).toBe(true);

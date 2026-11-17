@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import Stripe from "stripe";
-import {syncRefund} from "@/services/refundService";
+import { syncRefund } from "@/services/refundService";
 import { saveConnectAccount } from "@/services/connectService";
 import { getStripe, isStripeConfigured } from "@/lib/stripe";
 import {
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   if (!webhookSecret || isPlaceholderSecret(webhookSecret)) {
     console.error(
       "[routeflow] STRIPE_WEBHOOK_SECRET is not configured. Webhook rejected; " +
-        "no order can be marked paid. Run `stripe listen` and set the printed secret."
+        "no order can be marked paid. Run `stripe listen` and set the printed secret.",
     );
     return json({ error: "webhook_not_configured" }, 503);
   }
@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
     const failed = await markEventFailed(
       event.id,
       claim.attemptCount || 1,
-      err instanceof Error ? err.message : String(err)
+      err instanceof Error ? err.message : String(err),
     );
 
     if (!failed.success) {
@@ -125,10 +125,10 @@ async function handleEvent(event: Stripe.Event, _attemptCount: number): Promise<
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
       const orderId = session.metadata?.order_id ?? session.client_reference_id ?? null;
-      
+
       if (!orderId) {
         console.error(
-          `[routeflow] checkout.session.completed missing order_id for session ${session.id}`
+          `[routeflow] checkout.session.completed missing order_id for session ${session.id}`,
         );
         throw new Error("Missing order_id in session metadata");
       }
@@ -136,7 +136,7 @@ async function handleEvent(event: Stripe.Event, _attemptCount: number): Promise<
       const order = await findOrderByIdForWebhook(orderId);
       if (!order) {
         console.error(
-          `[routeflow] checkout.session.completed unknown order ${orderId} for session ${session.id}`
+          `[routeflow] checkout.session.completed unknown order ${orderId} for session ${session.id}`,
         );
         throw new Error(`Order not found: ${orderId}`);
       }
@@ -144,7 +144,9 @@ async function handleEvent(event: Stripe.Event, _attemptCount: number): Promise<
       // Only mark as paid if Stripe confirms payment is actually paid
       // Asynchronous payment methods have payment_status === "unpaid" at this stage
       if (session.payment_status !== "paid") {
-        console.log(`[routeflow] checkout.session.completed payment not paid (status: ${session.payment_status}) for order ${orderId}`);
+        console.log(
+          `[routeflow] checkout.session.completed payment not paid (status: ${session.payment_status}) for order ${orderId}`,
+        );
         // Do not mark order PAID for unpaid/pending payments
         // The order will be marked PAID when async_payment_succeeded fires
         return;
@@ -155,14 +157,14 @@ async function handleEvent(event: Stripe.Event, _attemptCount: number): Promise<
       // orders that Stripe has actually paid, and it never decides that a payment happened.
       if (session.amount_total == null || session.amount_total <= 0) {
         console.error(
-          `[routeflow] checkout.session.completed missing amount_total for order ${orderId} session ${session.id}`
+          `[routeflow] checkout.session.completed missing amount_total for order ${orderId} session ${session.id}`,
         );
         throw new Error("Stripe amount_total is required");
       }
 
       if (!session.currency) {
         console.error(
-          `[routeflow] checkout.session.completed missing currency for order ${orderId} session ${session.id}`
+          `[routeflow] checkout.session.completed missing currency for order ${orderId} session ${session.id}`,
         );
         throw new Error("Stripe currency is required");
       }
@@ -171,9 +173,10 @@ async function handleEvent(event: Stripe.Event, _attemptCount: number): Promise<
       // exact Stripe amount/currency. Asynchronous payments are legitimately paid.
       const amountPaid = session.amount_total / 100;
       const currency = session.currency.toUpperCase();
-      const paymentIntentId = typeof session.payment_intent === "string"
-        ? session.payment_intent
-        : session.payment_intent?.id ?? null;
+      const paymentIntentId =
+        typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : (session.payment_intent?.id ?? null);
 
       await completePayment(orderId, session.id, paymentIntentId, amountPaid, currency);
       return;
@@ -182,10 +185,10 @@ async function handleEvent(event: Stripe.Event, _attemptCount: number): Promise<
     case "checkout.session.async_payment_succeeded": {
       const session = event.data.object as Stripe.Checkout.Session;
       const orderId = session.metadata?.order_id ?? session.client_reference_id ?? null;
-      
+
       if (!orderId) {
         console.error(
-          `[routeflow] checkout.session.async_payment_succeeded missing order_id for session ${session.id}`
+          `[routeflow] checkout.session.async_payment_succeeded missing order_id for session ${session.id}`,
         );
         throw new Error("Missing order_id in session metadata");
       }
@@ -193,7 +196,7 @@ async function handleEvent(event: Stripe.Event, _attemptCount: number): Promise<
       const order = await findOrderByIdForWebhook(orderId);
       if (!order) {
         console.error(
-          `[routeflow] checkout.session.async_payment_succeeded unknown order ${orderId} for session ${session.id}`
+          `[routeflow] checkout.session.async_payment_succeeded unknown order ${orderId} for session ${session.id}`,
         );
         throw new Error(`Order not found: ${orderId}`);
       }
@@ -202,14 +205,14 @@ async function handleEvent(event: Stripe.Event, _attemptCount: number): Promise<
       // No server-side fallback is safe for the same reason as above.
       if (session.amount_total == null || session.amount_total <= 0) {
         console.error(
-          `[routeflow] checkout.session.async_payment_succeeded missing amount_total for order ${orderId} session ${session.id}`
+          `[routeflow] checkout.session.async_payment_succeeded missing amount_total for order ${orderId} session ${session.id}`,
         );
         throw new Error("Stripe amount_total is required");
       }
 
       if (!session.currency) {
         console.error(
-          `[routeflow] checkout.session.async_payment_succeeded missing currency for order ${orderId} session ${session.id}`
+          `[routeflow] checkout.session.async_payment_succeeded missing currency for order ${orderId} session ${session.id}`,
         );
         throw new Error("Stripe currency is required");
       }
@@ -218,9 +221,10 @@ async function handleEvent(event: Stripe.Event, _attemptCount: number): Promise<
       // exact Stripe amount/currency. Asynchronous payments are legitimately paid.
       const amountPaid = session.amount_total / 100;
       const currency = session.currency.toUpperCase();
-      const paymentIntentId = typeof session.payment_intent === "string"
-        ? session.payment_intent
-        : session.payment_intent?.id ?? null;
+      const paymentIntentId =
+        typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : (session.payment_intent?.id ?? null);
 
       await completePayment(orderId, session.id, paymentIntentId, amountPaid, currency);
       return;
@@ -273,7 +277,7 @@ async function completePayment(
   checkoutSessionId: string,
   paymentIntentId: string | null,
   amountPaid: number,
-  currency: string
+  currency: string,
 ): Promise<void> {
   const admin = getSupabaseAdmin();
 
@@ -287,19 +291,13 @@ async function completePayment(
   });
 
   if (error) {
-    console.error(
-      `[routeflow] atomic payment completion failed for order ${orderId}:`,
-      error
-    );
+    console.error(`[routeflow] atomic payment completion failed for order ${orderId}:`, error);
     throw new Error(`Payment completion failed: ${error.message}`);
   }
 
   const result = data as Record<string, unknown>;
   if (!result.success) {
-    console.error(
-      `[routeflow] payment validation failed for order ${orderId}:`,
-      result
-    );
+    console.error(`[routeflow] payment validation failed for order ${orderId}:`, result);
     throw new Error(`Payment validation failed: ${result.error}`);
   }
 }

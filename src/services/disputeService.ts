@@ -7,14 +7,9 @@ export async function resolveDispute(
   adminId: string,
 ) {
   const db = getSupabaseAdmin();
-  const { data: d, error } = await db
-    .from("disputes")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const { data: d, error } = await db.from("disputes").select("*").eq("id", id).single();
   if (error) throw error;
-  if (!["OPEN", "UNDER_REVIEW"].includes(d.status))
-    throw new Error("La disputa ya está resuelta");
+  if (!["OPEN", "UNDER_REVIEW"].includes(d.status)) throw new Error("La disputa ya está resuelta");
   const { error: claimError } = await db.rpc("claim_dispute_resolution", {
     p_dispute_id: id,
     p_decision: decision,

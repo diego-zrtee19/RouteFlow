@@ -1,4 +1,10 @@
-import { ShippingProvider, RateInput, CreateShipmentInput, ShipmentResult, TrackingResult } from "./types";
+import {
+  ShippingProvider,
+  RateInput,
+  CreateShipmentInput,
+  ShipmentResult,
+  TrackingResult,
+} from "./types";
 import { ShippingRate, ShipmentStatus } from "@/domain/types";
 import { fedexAuthService } from "@/lib/fedexAuth";
 
@@ -45,7 +51,7 @@ interface FedExScanEvent {
 /**
  * FedEx Shipping Provider
  * Documentation Reference: FedEx Developer Portal REST APIs (https://developer.fedex.com/)
- * 
+ *
  * Required Environment Variables for Live API:
  * - FEDEX_CLIENT_ID (or FEDEX_API_KEY)
  * - FEDEX_CLIENT_SECRET (or FEDEX_SECRET_KEY)
@@ -69,15 +75,26 @@ export class FedExShippingProvider implements ShippingProvider {
 
   private mapFedExStatusToRouteFlow(fedExStatus: string): ShipmentStatus {
     const statusMap: Record<string, ShipmentStatus> = {
-      "PENDING": "LABEL_CREATED",
-      "CREATED": "LABEL_CREATED",
-      "SHIPPED": "PICKED_UP",
-      "IN_TRANSIT": "IN_TRANSIT",
-      "OUT_FOR_DELIVERY": "OUT_FOR_DELIVERY",
-      "DELIVERED": "DELIVERED",
-      "FAILED": "FAILED",
-      "CANCELLED": "CANCELLED",
-      "EXCEPTION": "FAILED",
+      // Track v1 returns short scan/status codes, not English labels.
+      OC: "LABEL_CREATED",
+      PU: "PICKED_UP",
+      IT: "IN_TRANSIT",
+      AR: "IN_TRANSIT",
+      DP: "IN_TRANSIT",
+      AF: "IN_TRANSIT",
+      OD: "OUT_FOR_DELIVERY",
+      DL: "DELIVERED",
+      DE: "FAILED",
+      CA: "CANCELLED",
+      PENDING: "LABEL_CREATED",
+      CREATED: "LABEL_CREATED",
+      SHIPPED: "PICKED_UP",
+      IN_TRANSIT: "IN_TRANSIT",
+      OUT_FOR_DELIVERY: "OUT_FOR_DELIVERY",
+      DELIVERED: "DELIVERED",
+      FAILED: "FAILED",
+      CANCELLED: "CANCELLED",
+      EXCEPTION: "FAILED",
     };
     return statusMap[fedExStatus] || "LABEL_CREATED";
   }
@@ -196,7 +213,8 @@ export class FedExShippingProvider implements ShippingProvider {
             },
           ],
           pickupType: "DROPOFF_AT_FEDEX_LOCATION",
-          serviceType: input.serviceCode === "FEDEX_EXPRESS" ? "STANDARD_OVERNIGHT" : input.serviceCode,
+          serviceType:
+            input.serviceCode === "FEDEX_EXPRESS" ? "STANDARD_OVERNIGHT" : input.serviceCode,
           packagingType: "YOUR_PACKAGING",
           shippingChargesPayment: {
             paymentType: "SENDER",
@@ -205,10 +223,17 @@ export class FedExShippingProvider implements ShippingProvider {
           labelSpecification: { imageType: "PDF", labelStockType: "PAPER_4X6" },
           requestedPackageLineItems: [
             {
-              ...(input.packageDetails?.dimensions ? { dimensions: { ...input.packageDetails.dimensions, units: "CM" } } : {}),
+              ...(input.packageDetails?.dimensions
+                ? { dimensions: { ...input.packageDetails.dimensions, units: "CM" } }
+                : {}),
               weight: {
                 units: normalizeCountry(input.sender.country) === "US" ? "LB" : "KG",
-                value: Number(((input.packageDetails?.weightKg || 1) * (normalizeCountry(input.sender.country) === "US" ? 2.2046226218 : 1)).toFixed(3)),
+                value: Number(
+                  (
+                    (input.packageDetails?.weightKg || 1) *
+                    (normalizeCountry(input.sender.country) === "US" ? 2.2046226218 : 1)
+                  ).toFixed(3),
+                ),
               },
             },
           ],
@@ -234,9 +259,13 @@ export class FedExShippingProvider implements ShippingProvider {
       }
 
       const data = await response.json();
-      
+
       const transaction = data.output?.transactionShipments?.[0];
-      const trackingNumber = transaction?.pieceResponses?.[0]?.trackingNumber || transaction?.masterTrackingNumber || transaction?.trackingNumber || "";
+      const trackingNumber =
+        transaction?.pieceResponses?.[0]?.trackingNumber ||
+        transaction?.masterTrackingNumber ||
+        transaction?.trackingNumber ||
+        "";
       const packageDocuments: FedExPackageDocument[] = [
         ...(transaction?.packageDocuments || []),
         ...(transaction?.pieceResponses?.[0]?.packageDocuments || []),
@@ -250,13 +279,15 @@ export class FedExShippingProvider implements ShippingProvider {
       return {
         success: true,
         provider: "FEDEX",
-        providerShipmentId: data.output?.transactionShipments?.[0]?.masterTrackingNumber || trackingNumber,
+        providerShipmentId:
+          data.output?.transactionShipments?.[0]?.masterTrackingNumber || trackingNumber,
         trackingNumber,
         trackingUrl: `https://www.fedex.com/fedextrack/?trknbr=${trackingNumber}`,
         labelUrl,
         labelBase64: labelDoc?.encodedLabel,
         status: this.mapFedExStatusToRouteFlow("CREATED"),
-        estimatedDelivery: data.output?.transactionShipments?.[0]?.serviceCommitMessage?.commitDate || null,
+        estimatedDelivery:
+          data.output?.transactionShipments?.[0]?.serviceCommitMessage?.commitDate || null,
       };
     } catch (error) {
       console.error("FedEx shipment creation failed:", error);
@@ -285,6 +316,7 @@ export class FedExShippingProvider implements ShippingProvider {
 
       const response = await fetch(`${this.baseUrl}/track/v1/trackingnumbers`, {
         method: "POST",
+        signal: AbortSignal.timeout(20_000),
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
@@ -301,6 +333,8 @@ export class FedExShippingProvider implements ShippingProvider {
       const data = await response.json();
       const trackResults = data.output?.completeTrackResults?.[0]?.trackResults?.[0] || {};
 
+      if (trackResults.error || typeof trackResults.latestStatusDetail?.code !== "string")
+        throw new Error("FedEx returned no authoritative tracking status");
       const scanEvents: FedExScanEvent[] = trackResults.scanEvents || [];
       const events = scanEvents.map((event, index) => ({
         id: `ev_${Date.now()}_${index}`,
@@ -316,7 +350,9 @@ export class FedExShippingProvider implements ShippingProvider {
         status: this.mapFedExStatusToRouteFlow(trackResults.latestStatusDetail?.code || "PENDING"),
         carrier: "FedEx",
         service: trackResults.service?.type || "FedEx",
-        estimatedDelivery: trackResults.estimatedDeliveryTimeWindow?.[0]?.end,
+        estimatedDelivery:
+          trackResults.estimatedDeliveryTimeWindow?.window?.ends ??
+          trackResults.estimatedDeliveryTimeWindow?.[0]?.end,
         events,
       };
     } catch (error) {

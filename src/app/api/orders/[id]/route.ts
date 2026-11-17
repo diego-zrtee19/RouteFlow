@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiErrorResponse } from "@/lib/apiResponse";
-import {
-  findOrderForBuyer,
-  findOrderByStripeSessionForBuyer,
-} from "@/services/orderService";
+import { findOrderForBuyer, findOrderByStripeSessionForBuyer } from "@/services/orderService";
 import { loadOrderContext } from "@/repositories/orderRepository";
 import { toBuyerOrderView } from "@/domain/dto";
 import type { Order } from "@/domain/types";
@@ -27,8 +24,7 @@ export const runtime = "nodejs";
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
-  const presentedToken =
-    req.headers.get("x-buyer-token") ?? req.nextUrl.searchParams.get("token");
+  const presentedToken = req.headers.get("x-buyer-token");
   const sessionId = req.nextUrl.searchParams.get("session_id");
 
   // The buyer's tracking link carries the buyer token. The post-checkout
@@ -61,9 +57,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     // `toBuyerOrderView` never emits buyerEmail, buyerPhone, the street address,
     // a Stripe id or the token hash.
-    return NextResponse.json({
-      order: { ...toBuyerOrderView(order, shipment, shipmentEvents, dispute), deliveryPin: await getBuyerDeliveryPin(order) },
-    }, { headers: { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" } });
+    return NextResponse.json(
+      {
+        order: {
+          ...toBuyerOrderView(order, shipment, shipmentEvents, dispute),
+          deliveryPin: await getBuyerDeliveryPin(order),
+        },
+      },
+      { headers: { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" } },
+    );
   } catch (error) {
     return apiErrorResponse("INTERNAL_ERROR", "Could not load the order", 500, error);
   }

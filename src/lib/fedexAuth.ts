@@ -1,7 +1,7 @@
 /**
  * FedEx OAuth 2.0 Authentication Service
  * Handles OAuth token generation and management for FedEx API requests
- * 
+ *
  * Documentation: https://developer.fedex.com/api/en-us/catalog/authorization/docs.html
  */
 
@@ -48,17 +48,20 @@ class FedExAuthService {
    */
   private async requestNewToken(): Promise<string> {
     if (!this.isConfigured()) {
-      throw new Error("FedEx credentials not configured. Please set FEDEX_CLIENT_ID and FEDEX_CLIENT_SECRET");
+      throw new Error(
+        "FedEx credentials not configured. Please set FEDEX_CLIENT_ID and FEDEX_CLIENT_SECRET",
+      );
     }
 
     try {
       const params = new URLSearchParams();
-      params.append('grant_type', 'client_credentials');
-      params.append('client_id', this.clientId);
-      params.append('client_secret', this.clientSecret);
+      params.append("grant_type", "client_credentials");
+      params.append("client_id", this.clientId);
+      params.append("client_secret", this.clientSecret);
 
       const response = await fetch(`${this.baseUrl}/oauth/token`, {
         method: "POST",
+        signal: AbortSignal.timeout(10_000),
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },

@@ -26,7 +26,9 @@ export async function GET() {
     const [{ data: seller }, { data: orders }] = await Promise.all([
       admin
         .from("sellers")
-        .select("id, store_username, store_name, description, logo_url, instagram_handle, contact_email, contact_phone, kyc_status, ship_from_address")
+        .select(
+          "id, store_username, store_name, description, logo_url, instagram_handle, contact_email, contact_phone, kyc_status, ship_from_address",
+        )
         .eq("id", sellerId)
         .maybeSingle(),
       admin
@@ -42,10 +44,16 @@ export async function GET() {
 
     const list = orders || [];
     const captured = list.filter((o) => o.payment_status === "SUCCEEDED");
-    const totalSales = captured.reduce((sum, o) => sum + Math.max(0, Number(o.amount || 0) - Number(o.refunded_amount || 0)), 0);
+    const totalSales = captured.reduce(
+      (sum, o) => sum + Math.max(0, Number(o.amount || 0) - Number(o.refunded_amount || 0)),
+      0,
+    );
 
     return NextResponse.json({
-      fedex: { configured: new FedExShippingProvider().isConfigured(), testMode: new FedExShippingProvider().isTestMode() },
+      fedex: {
+        configured: new FedExShippingProvider().isConfigured(),
+        testMode: new FedExShippingProvider().isTestMode(),
+      },
       seller: {
         id: seller.id,
         businessName: seller.store_name,
@@ -63,7 +71,8 @@ export async function GET() {
         totalOrders: list.length,
         pendingOrders: list.filter((o) => o.payment_status === "PENDING").length,
         paidOrders: captured.length,
-        shippedOrders: list.filter((o) => o.status === "SHIPPED" || o.status === "DELIVERED").length,
+        shippedOrders: list.filter((o) => o.status === "SHIPPED" || o.status === "DELIVERED")
+          .length,
         completedOrders: list.filter((o) => o.status === "COMPLETED").length,
       },
     });
@@ -99,11 +108,23 @@ export async function PATCH(req: NextRequest) {
     if (body.shippingAddress !== undefined) {
       const address = body.shippingAddress;
       const keys = ["fullName", "phone", "street", "city", "state", "postalCode", "country"];
-      if (!address || keys.some((key) => typeof address[key] !== "string" || !String(address[key]).trim()) || !/^[A-Za-z]{2}$/.test(String(address.country))) {
-        return apiErrorResponse("VALIDATION_ERROR", "Complete the origin address, including a two-letter country code", 400);
+      if (
+        !address ||
+        keys.some((key) => typeof address[key] !== "string" || !String(address[key]).trim()) ||
+        !/^[A-Za-z]{2}$/.test(String(address.country))
+      ) {
+        return apiErrorResponse(
+          "VALIDATION_ERROR",
+          "Complete the origin address, including a two-letter country code",
+          400,
+        );
       }
-      updates.ship_from_address = Object.fromEntries(keys.map((key) => [key, String(address[key]).trim()]));
-      (updates.ship_from_address as Record<string, string>).country = String(address.country).toUpperCase();
+      updates.ship_from_address = Object.fromEntries(
+        keys.map((key) => [key, String(address[key]).trim()]),
+      );
+      (updates.ship_from_address as Record<string, string>).country = String(
+        address.country,
+      ).toUpperCase();
     }
 
     if (body.businessName !== undefined) {
@@ -117,10 +138,15 @@ export async function PATCH(req: NextRequest) {
     if (body.contactEmail !== undefined) updates.contact_email = body.contactEmail;
     if (body.contactPhone !== undefined) updates.contact_phone = body.contactPhone;
     if (body.logoUrl !== undefined) {
-      if (typeof body.logoUrl !== "string" || (body.logoUrl && !body.logoUrl.startsWith("https://"))) return apiErrorResponse("VALIDATION_ERROR", "El logo debe usar una URL HTTPS", 400);
+      if (
+        typeof body.logoUrl !== "string" ||
+        (body.logoUrl && !body.logoUrl.startsWith("https://"))
+      )
+        return apiErrorResponse("VALIDATION_ERROR", "El logo debe usar una URL HTTPS", 400);
       updates.logo_url = body.logoUrl || null;
     }
-    if (body.instagramHandle !== undefined) updates.instagram_handle = String(body.instagramHandle).trim();
+    if (body.instagramHandle !== undefined)
+      updates.instagram_handle = String(body.instagramHandle).trim();
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ message: "No fields to update" });
@@ -131,7 +157,9 @@ export async function PATCH(req: NextRequest) {
       .from("sellers")
       .update(updates)
       .eq("id", auth.value.id)
-      .select("id, store_name, description, contact_email, contact_phone, logo_url, instagram_handle, ship_from_address")
+      .select(
+        "id, store_name, description, contact_email, contact_phone, logo_url, instagram_handle, ship_from_address",
+      )
       .single();
 
     if (error) throw error;

@@ -70,7 +70,7 @@ export function makeOrder(overrides: Partial<Order> = {}): Order {
   const tokenHash = hashBuyerToken(
     (overrides.buyerEmail as string | undefined) === "buyer-b@example.com"
       ? BUYER_B_TOKEN
-      : BUYER_A_TOKEN
+      : BUYER_A_TOKEN,
   );
 
   return {

@@ -1,102 +1,101 @@
-"use client";
-
-import React from "react";
 import Link from "next/link";
 import { Card, StatCard } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { Users, ShoppingBag, PackageCheck, ShieldAlert, ArrowLeft } from "lucide-react";
-import { useI18n } from "@/i18n/LanguageProvider";
+import { buttonStyles } from "@/components/ui/Button";
 import type { AdminStats, IntegrationStates } from "./adminData";
-
-/**
- * ADMIN CONSOLE (client component).
- *
- * SECURITY: this used to import `dataStore` and `ShippingRegistry` directly and
- * render `dataStore.orders` — a client component, so the audit found every
- * seller's orders, including buyer email, phone and address, in the browser
- * bundle. It now receives plain counts as props and imports no data layer at
- * all, so there is nothing sensitive to leak.
- */
-interface AdminConsoleProps {
-  stripe: {
-    configured: boolean;
-    webhookConfigured: boolean;
-    testMode: boolean;
-  };
+interface Props {
+  stripe: { configured: boolean; webhookConfigured: boolean; testMode: boolean };
   stats: AdminStats;
   integrationStates: IntegrationStates;
 }
-
-export default function AdminConsole({ stripe, stats, integrationStates }: AdminConsoleProps) {
-  const { t } = useI18n();
-  const statusLabel = (ok: boolean) => (ok ? t("admin.connected") : t("admin.notConfigured"));
-
+export default function AdminConsole({ stripe, stats, integrationStates }: Props) {
   return (
-    <div className="min-h-screen bg-brand-bg p-6 max-w-6xl mx-auto space-y-6">
-      <Link href="/admin/disputes" className="text-blue-700 underline">Revisar y resolver disputas</Link>
-      <Link href="/admin/operations" className="block text-blue-700 underline">Estado de la operación y alertas</Link>
-      <div className="flex items-center justify-between border-b pb-4">
-        <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-blue-600">{t("admin.eyebrow")}</span>
-          <h1 className="text-2xl font-extrabold text-[#0B1220]">{t("admin.title")}</h1>
-        </div>
-        <Link href="/dashboard" className="text-xs font-semibold text-slate-500 hover:text-[#0B1220] flex items-center gap-1">
-          <ArrowLeft className="w-3.5 h-3.5" /> {t("admin.back")}
-        </Link>
+    <main className="p-5 sm:p-8 space-y-8">
+      <div>
+        <p className="text-sm text-muted">Vista general de la plataforma</p>
+        <h1 className="mt-2 text-3xl font-semibold">Todo lo importante, en un lugar</h1>
+        <p className="mt-3 text-muted">
+          Revisa la actividad y atiende lo que necesita tu intervención.
+        </p>
+        <p className="mt-2 text-xs text-muted">
+          Consulta: {new Date().toLocaleString("es-MX", { timeZone: "America/Mexico_City" })} · Hora
+          de Ciudad de México
+        </p>
       </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title={t("admin.activeSellers")} value={stats.activeSellers} icon={<Users className="w-5 h-5 text-blue-600" />} />
-        <StatCard title={t("admin.totalProducts")} value={stats.totalProducts} icon={<ShoppingBag className="w-5 h-5 text-emerald-600" />} />
-        <StatCard title={t("admin.platformOrders")} value={stats.totalOrders} icon={<PackageCheck className="w-5 h-5 text-indigo-600" />} />
-        <StatCard title={t("admin.openDisputes")} value={stats.openDisputes} icon={<ShieldAlert className="w-5 h-5 text-rose-600" />} />
+      <div className="rounded-xl border border-line bg-accent-50 px-5 py-4 text-sm">
+        {stripe.testMode
+          ? "Entorno de prueba: estas cifras pueden incluir compras simuladas."
+          : "Las cifras corresponden al entorno conectado. La configuración no certifica disponibilidad comercial."}
       </div>
-
-      {/* Payment Integration Readiness */}
-      <Card className="p-5">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{t("admin.paymentsTitle")}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="p-3 bg-slate-50 rounded-lg flex justify-between items-center gap-2">
-            <span className="text-xs font-semibold">{t("admin.stripe")}</span>
-            <span className="flex items-center gap-1.5">
-              {stripe.testMode && (
-                <Badge variant="warning">{t("admin.testMode")}</Badge>
-              )}
-              <Badge variant={stripe.configured ? "success" : "blue"}>
-                {statusLabel(stripe.configured)}
-              </Badge>
-            </span>
-          </div>
-          <div className="p-3 bg-slate-50 rounded-lg flex justify-between items-center">
-            <span className="text-xs font-semibold">{t("admin.stripeWebhook")}</span>
-            <Badge variant={stripe.webhookConfigured ? "success" : "blue"}>
-              {statusLabel(stripe.webhookConfigured)}
-            </Badge>
-          </div>
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard title="Vendedores registrados" value={stats.activeSellers} />
+        <StatCard title="Productos publicados" value={stats.totalProducts} />
+        <StatCard title="Pedidos creados" value={stats.totalOrders} />
+        <StatCard title="Casos abiertos" value={stats.openDisputes} />
+      </div>
+      <Card>
+        <h2 className="text-xl font-semibold">Primero, lo que necesita atención</h2>
+        <p className="mt-2 text-muted">
+          {stats.openDisputes
+            ? `${stats.openDisputes} casos esperan revisión. Abre cada caso antes de decidir cómo resolverlo.`
+            : "No hay casos abiertos registrados. Consulta Operación para revisar errores de pagos, avisos y entregas."}
+        </p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Link href="/admin/disputes" className={buttonStyles()}>
+            Revisar casos
+          </Link>
+          <Link href="/admin/operations" className={buttonStyles({ variant: "secondary" })}>
+            Revisar operación
+          </Link>
         </div>
       </Card>
-
-      {/* Carrier Integration Readiness */}
-      <Card className="p-5">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">{t("admin.carriersTitle")}</h2>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="p-3 bg-slate-50 rounded-lg flex justify-between items-center">
-            <span className="text-xs font-semibold">DHL Express</span>
-            <Badge variant="blue">{integrationStates.DHL}</Badge>
-          </div>
-          <div className="p-3 bg-slate-50 rounded-lg flex justify-between items-center">
-            <span className="text-xs font-semibold">FedEx Ground/Express</span>
-            <Badge variant="blue">{integrationStates.FEDEX}</Badge>
-          </div>
-          <div className="p-3 bg-slate-50 rounded-lg flex justify-between items-center">
-            <span className="text-xs font-semibold">Uber Direct Local</span>
-            <Badge variant="blue">{integrationStates.UBER}</Badge>
-          </div>
-        </div>
-        <p className="text-[11px] text-slate-400 mt-2">
-          {t("admin.integrationConfiguredNote")}
+      <div className="grid sm:grid-cols-2 gap-5">
+        {[
+          ["Pedidos", "Consulta el estado de las compras y sus importes.", "/admin/orders"],
+          [
+            "Vendedores",
+            "Revisa las tiendas registradas y su estado de verificación.",
+            "/admin/sellers",
+          ],
+        ].map(([title, body, href]) => (
+          <Card key={href}>
+            <h2 className="text-xl font-semibold">{title}</h2>
+            <p className="mt-2 mb-4 text-muted">{body}</p>
+            <Link href={href} className={buttonStyles({ variant: "outline" })}>
+              Ver {title.toLowerCase()}
+            </Link>
+          </Card>
+        ))}
+      </div>
+      <Card>
+        <h2 className="text-xl font-semibold">Cómo leer tus números</h2>
+        <p className="mt-2 text-muted">
+          Los pedidos creados incluyen compras pendientes o canceladas. Los vendedores registrados
+          no equivalen a vendedores activos. El importe vendido pertenece a los vendedores: no
+          representa la ganancia de RouteFlow.
+        </p>
+        <p className="mt-3 text-sm text-muted">
+          El margen neto sigue pendiente de confirmar tarifas, impuestos, reembolsos y costos
+          operativos.
         </p>
       </Card>
-    </div>
+      <details className="rounded-2xl bg-white border border-line p-6">
+        <summary className="cursor-pointer font-semibold">Configuración de servicios</summary>
+        <div className="mt-4 space-y-3 text-sm">
+          <p>
+            Stripe: {stripe.configured ? "Configurado" : "Pendiente"} · Webhook:{" "}
+            {stripe.webhookConfigured ? "Configurado" : "Pendiente"}
+          </p>
+          {Object.entries(integrationStates).map(([name, state]) => (
+            <p key={name}>
+              {name}: {state === "CONFIGURED" ? "Configurado" : "Pendiente"}
+            </p>
+          ))}
+          <p className="text-muted">
+            Indica presencia de configuración. Consulta Operación para revisar ejecuciones y fallos
+            registrados.
+          </p>
+        </div>
+      </details>
+    </main>
   );
 }

@@ -21,10 +21,7 @@ export const runtime = "nodejs";
  * Unknown, deactivated and expired links are all indistinguishable (404), so
  * nobody can probe which link ids a seller has used.
  */
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ publicId: string }> }
-) {
+export async function GET(_req: Request, { params }: { params: Promise<{ publicId: string }> }) {
   const { publicId } = await params;
 
   if (!publicId) {
@@ -54,16 +51,27 @@ export async function GET(
       }),
     ]).catch(() => undefined);
 
-    const { data: variants, error: variantError } = await getSupabaseAdmin().from("product_variants").select("id").eq("product_id", product.id).eq("is_active", true).limit(1);
+    const { data: variants, error: variantError } = await getSupabaseAdmin()
+      .from("product_variants")
+      .select("id")
+      .eq("product_id", product.id)
+      .eq("is_active", true)
+      .limit(1);
     if (variantError) throw variantError;
     const view = toPublicPurchaseLinkView(link, product, seller);
-    return NextResponse.json({ ...view, product: { ...view.product, hasVariants: !!variants?.length } }, {
-      // Buyer pages are public and shareable: never let a CDN or the browser
-      // cache a stale (e.g. freshly created) link lookup.
-      headers: { "Cache-Control": "no-store" },
-    });
+    return NextResponse.json(
+      { ...view, product: { ...view.product, hasVariants: !!variants?.length } },
+      {
+        // Buyer pages are public and shareable: never let a CDN or the browser
+        // cache a stale (e.g. freshly created) link lookup.
+        headers: { "Cache-Control": "no-store" },
+      },
+    );
   } catch (error) {
     console.error("[routeflow] could not resolve the public link:", error);
-    return NextResponse.json({ error: "link_not_found" }, { status: 404 });
+    return NextResponse.json(
+      { error: "temporarily_unavailable" },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
   }
 }

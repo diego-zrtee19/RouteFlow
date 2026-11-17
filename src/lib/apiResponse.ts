@@ -27,11 +27,7 @@ export interface ApiErrorBody {
 }
 
 /** Builds the JSON body without a response object (for reuse in handlers). */
-export function apiErrorBody(
-  code: ErrorCode,
-  message: string,
-  detail?: string
-): ApiErrorBody {
+export function apiErrorBody(code: ErrorCode, message: string, detail?: string): ApiErrorBody {
   const body: ApiErrorBody = { error: { code, message } };
   if (detail && process.env.NODE_ENV !== "production") {
     body.error.detail = detail;
@@ -50,7 +46,7 @@ export function apiErrorResponse(
   message: string,
   status: number,
   cause?: unknown,
-  detail?: string
+  detail?: string,
 ): NextResponse<ApiErrorBody> {
   if (cause) {
     console.error(`[routeflow] ${code}: ${message}`, cause);
@@ -66,13 +62,7 @@ export function apiErrorResponse(
  */
 export function toErrorResponse(cause: unknown): NextResponse<ApiErrorBody> {
   if (isAppError(cause)) {
-    return apiErrorResponse(
-      cause.code,
-      cause.message,
-      cause.status,
-      cause,
-      cause.detail
-    );
+    return apiErrorResponse(cause.code, cause.message, cause.status, cause, cause.detail);
   }
 
   return apiErrorResponse("INTERNAL_ERROR", "Unexpected server error", 500, cause);

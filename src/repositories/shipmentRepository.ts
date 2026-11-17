@@ -61,6 +61,10 @@ export async function createShipment(input: CreateShipmentInput): Promise<Shipme
     .select()
     .single();
 
+  if (error?.code === "23505") {
+    const raced = await findShipmentByOrder(input.orderId);
+    if (raced?.trackingNumber === input.trackingNumber) return raced;
+  }
   if (error || !data) {
     throw new DatabaseError(`Could not create the shipment: ${error?.message ?? "unknown"}`);
   }
@@ -82,9 +86,7 @@ export async function findShipmentByOrder(orderId: string): Promise<Shipment | n
 }
 
 /** A shipment by its public tracking number (the buyer's lookup path). */
-export async function findShipmentByTracking(
-  trackingNumber: string
-): Promise<Shipment | null> {
+export async function findShipmentByTracking(trackingNumber: string): Promise<Shipment | null> {
   const admin = getSupabaseAdmin();
   const { data, error } = await admin
     .from("shipments")
@@ -99,18 +101,26 @@ export async function findShipmentByTracking(
 /** Updates the shipment status after a carrier poll. */
 export async function updateShipmentStatus(
   shipmentId: string,
-  status: ShipmentStatus
+  status: ShipmentStatus,
 ): Promise<Shipment | null> {
   const admin = getSupabaseAdmin();
   const { data, error } = await admin
     .from("shipments")
     .update({ status })
     .eq("id", shipmentId)
+    .neq("status", "DELIVERED") // A concurrent stale poll cannot undo delivery.
     .select()
     .maybeSingle();
 
   if (error) throw new DatabaseError(`Could not update the shipment: ${error.message}`);
-  return data ? rowToShipment(data as Record<string, unknown>) : null;
+  if (data) return rowToShipment(data as Record<string, unknown>);
+  const { data: current, error: readError } = await admin
+    .from("shipments")
+    .select("*")
+    .eq("id", shipmentId)
+    .maybeSingle();
+  if (readError) throw new DatabaseError("Could not reload the shipment");
+  return current ? rowToShipment(current as Record<string, unknown>) : null;
 }
 /**
  * Persists carrier scans.
@@ -120,7 +130,7 @@ export async function updateShipmentStatus(
  */
 export async function recordShipmentEvents(
   shipmentId: string,
-  events: ShipmentEventInput[]
+  events: ShipmentEventInput[],
 ): Promise<number> {
   if (events.length === 0) return 0;
 
@@ -133,7 +143,7 @@ export async function recordShipmentEvents(
       location: event.location,
       occurred_at: event.occurredAt,
     })),
-    { onConflict: "shipment_id,status,occurred_at", ignoreDuplicates: true }
+    { onConflict: "shipment_id,status,occurred_at", ignoreDuplicates: true },
   );
 
   if (error) {

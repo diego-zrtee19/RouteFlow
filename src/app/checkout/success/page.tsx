@@ -3,10 +3,10 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
-import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
+import { CommerceHeader } from "@/components/shared/CommerceHeader";
 import { readBuyerToken, storeBuyerSession } from "@/lib/buyerTokenStore";
 import { clearPaidCatalogCart } from "@/lib/catalogCartStore";
-import { Button } from "@/components/ui/Button";
+import { buttonStyles } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useI18n } from "@/i18n/LanguageProvider";
 import Link from "next/link";
@@ -32,8 +32,12 @@ function SuccessInner() {
   const [order, setOrder] = useState<SuccessOrder | null>(null);
   const [testMode, setTestMode] = useState(true);
   const attempts = useRef(0);
-  useEffect(() => { if (order?.id && sessionId) storeBuyerSession(order.id, sessionId); }, [order?.id, sessionId]);
-  useEffect(() => { if (phase === "paid" && order?.id) clearPaidCatalogCart(order.id); }, [phase, order?.id]);
+  useEffect(() => {
+    if (order?.id && sessionId) storeBuyerSession(order.id, sessionId);
+  }, [order?.id, sessionId]);
+  useEffect(() => {
+    if (phase === "paid" && order?.id) clearPaidCatalogCart(order.id);
+  }, [phase, order?.id]);
 
   // Appended to the tracking link only when the token is actually parked in this
   // tab. sessionStorage is unavailable during SSR, hence the `typeof window`
@@ -158,73 +162,57 @@ function SuccessInner() {
     };
   }, [orderId, sessionId, loadOrder, attemptVerify]);
 
-
   const supportEmail = "soporte@routeflow.mx";
 
   return (
     <div className="min-h-screen bg-brand-bg pb-16">
-      <header className="bg-white border-b border-slate-200/80">
-        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/" className="font-extrabold text-sm text-[#0B1220]">
-            {t("checkout.header")}
-          </Link>
-          <LanguageSwitcher />
-        </div>
-      </header>
+      <CommerceHeader />
 
       <main className="max-w-3xl mx-auto px-4 pt-6 space-y-4">
         {phase === "verifying" && (
           <Card className="p-8 text-center space-y-3">
-            <RefreshCw className="w-6 h-6 text-[#2563EB] mx-auto animate-spin" />
-            <p className="text-sm font-semibold text-[#0B1220]">
-              {t("checkout.success.verifying")}
-            </p>
+            <RefreshCw className="w-6 h-6 text-accent-600 mx-auto animate-spin" />
+            <p className="text-sm font-semibold text-ink">{t("checkout.success.verifying")}</p>
           </Card>
         )}
 
         {phase === "pending" && (
           <Card className="p-8 text-center space-y-3">
             <RefreshCw className="w-6 h-6 text-amber-500 mx-auto animate-spin" />
-            <h1 className="text-xl font-bold text-[#0B1220]">
-              {t("checkout.success.pendingTitle")}
-            </h1>
+            <h1 className="text-xl font-semibold text-ink">{t("checkout.success.pendingTitle")}</h1>
             <p className="text-sm text-slate-500">{t("checkout.success.pendingBody")}</p>
-            <p className="text-xs text-slate-400">{t("checkout.success.pendingHint")}</p>
+            <p className="text-xs text-slate-500">{t("checkout.success.pendingHint")}</p>
           </Card>
         )}
 
         {phase === "failed" && (
           <Card className="p-8 text-center space-y-3 border-rose-200">
             <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
-            <h1 className="text-xl font-bold text-[#0B1220]">
-              {t("checkout.success.failedTitle")}
-            </h1>
+            <h1 className="text-xl font-semibold text-ink">{t("checkout.success.failedTitle")}</h1>
             <p className="text-sm text-slate-500">{t("checkout.success.failedBody")}</p>
           </Card>
         )}
 
         {(phase === "missing" || !orderId) && (
           <Card className="p-8 text-center space-y-3">
-            <AlertCircle className="w-10 h-10 text-slate-400 mx-auto" />
-            <h1 className="text-xl font-bold text-[#0B1220]">
+            <AlertCircle className="w-10 h-10 text-slate-500 mx-auto" />
+            <h1 className="text-xl font-semibold text-ink">
               {t("checkout.success.notFoundTitle")}
             </h1>
             <p className="text-sm text-slate-500">
               {orderId ? t("checkout.success.notFoundBody") : t("checkout.success.missingOrder")}
             </p>
-            <Link href="/">
-              <Button variant="outline">{t("checkout.success.backHome")}</Button>
+            <Link href="/" className={buttonStyles({ variant: "outline" })}>
+              {t("checkout.success.backHome")}
             </Link>
           </Card>
         )}
 
         {phase === "paid" && order && (
           <>
-            <Card className="p-8 text-center space-y-3 bg-linear-to-b from-emerald-50/50 to-white">
+            <Card className="p-8 text-center space-y-3 bg-white">
               <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
-              <h1 className="text-xl font-bold text-[#0B1220]">
-                {t("checkout.success.paidTitle")}
-              </h1>
+              <h1 className="text-xl font-semibold text-ink">{t("checkout.success.paidTitle")}</h1>
               <p className="text-sm text-slate-500">{t("checkout.success.paidBody")}</p>
               {testMode && (
                 <span className="inline-block px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider">
@@ -234,9 +222,18 @@ function SuccessInner() {
             </Card>
 
             <BuyerReceipt order={order} />
-            <Card className="p-5 space-y-2"><h2 className="font-bold">Encuentra esta compra cuando la necesites</h2><p className="text-sm">Entra a Mis compras con el correo que usaste al pagar. Podrás recuperar el seguimiento desde otro dispositivo y pedir ayuda. Comprar no requiere registrarte.</p><Link href="/mis-compras" className="inline-block text-blue-700 underline min-h-11">Mis compras / recuperar acceso</Link></Card>
+            <Card className="p-5 space-y-2">
+              <h2 className="font-semibold">Encuentra esta compra cuando la necesites</h2>
+              <p className="text-sm">
+                Entra a Mis compras con el correo que usaste al pagar. Podrás recuperar el
+                seguimiento desde otro dispositivo y pedir ayuda. Comprar no requiere registrarte.
+              </p>
+              <Link href="/mis-compras" className="inline-block text-accent-700 underline min-h-11">
+                Mis compras / recuperar acceso
+              </Link>
+            </Card>
 
-            <p className="text-center text-xs text-slate-400">
+            <p className="text-center text-xs text-slate-500">
               {t("checkout.success.questions", { email: supportEmail })}
             </p>
 
@@ -249,17 +246,19 @@ function SuccessInner() {
               buyer came back on another device) the link still resolves, because
               /order/[id] falls back to the Stripe session credential.
             */}
-            <Link
-              href={order ? `/order/${order.id}${buyerTokenParam}` : "/"}
-              rel="noreferrer"
-              className="flex-1"
-            >
-                <Button className="w-full">Seguir mi pedido</Button>
+              <Link
+                href={order ? `/order/${order.id}${buyerTokenParam}` : "/"}
+                rel="noreferrer"
+
+                className={buttonStyles({ className: "flex-1 w-full" })}
+              >
+                Seguir mi pedido
               </Link>
-              <Link href="/" className="flex-1">
-                <Button variant="secondary" className="w-full">
-                  {t("checkout.success.backHome")}
-                </Button>
+              <Link
+                href="/"
+                className={buttonStyles({ variant: "secondary", className: "flex-1 w-full" })}
+              >
+                {t("checkout.success.backHome")}
               </Link>
             </div>
           </>
@@ -276,4 +275,3 @@ export default function SuccessPage() {
     </Suspense>
   );
 }
-

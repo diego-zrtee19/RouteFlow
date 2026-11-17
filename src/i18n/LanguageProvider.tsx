@@ -26,8 +26,11 @@ const I18nContext = createContext<I18nContextValue>({
 function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  try { return match ? decodeURIComponent(match[1]) : null; }
-  catch { return null; }
+  try {
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
 }
 
 function persistLocale(locale: Locale) {
@@ -79,7 +82,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const t = useCallback(
     (key: string, vars?: TranslationVars) => translate(locale, key, vars),
-    [locale]
+    [locale],
   );
 
   const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t]);

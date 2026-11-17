@@ -3,6 +3,7 @@ import { requireSeller } from "@/lib/authz";
 import { apiErrorResponse } from "@/lib/apiResponse";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import type { AnalyticsSummary } from "@/domain/types";
+import { medianMinutes } from "@/domain/operationalExperience";
 
 /**
  * GET /api/dashboard/analytics
@@ -46,6 +47,25 @@ export async function GET() {
       countEvents("PAYMENT_SUCCEEDED"),
       countEvents("ORDER_COMPLETED"),
     ]);
+    for (const result of [viewsRes, startsRes, paidEventsRes, completedRes])
+      if (result.error) throw result.error;
+    const [timings, reservations] = await Promise.all([
+      admin
+        .from("orders")
+        .select("created_at,paid_at,shipments(created_at)")
+        .eq("seller_id", sellerId)
+        .eq("payment_status", "SUCCEEDED")
+        .order("created_at", { ascending: false })
+        .limit(200),
+      admin
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("seller_id", sellerId)
+        .in("payment_status", ["PENDING", "FAILED"])
+        .not("reservation_expires_at", "is", null)
+        .is("stock_released_at", null),
+    ]);
+    if (timings.error || reservations.error) throw timings.error || reservations.error;
 
     // ---- Money and orders: the authoritative records ------------------------
     const { data: paidOrders, error: ordersError } = await admin
@@ -57,7 +77,10 @@ export async function GET() {
     if (ordersError) throw ordersError;
 
     const gmv = round2(
-      (paidOrders ?? []).reduce((sum, row) => sum + Math.max(0, Number(row.amount ?? 0) - Number(row.refunded_amount ?? 0)), 0),
+      (paidOrders ?? []).reduce(
+        (sum, row) => sum + Math.max(0, Number(row.amount ?? 0) - Number(row.refunded_amount ?? 0)),
+        0,
+      ),
     );
 
     const paymentSuccess = (paidOrders ?? []).length;
@@ -69,9 +92,7 @@ export async function GET() {
       completedOrders: completedRes.count ?? 0,
       gmv,
       averageOrderValue: paymentSuccess ? round2(gmv / paymentSuccess) : 0,
-      conversionRate: viewsRes.count
-        ? round2((paymentSuccess / viewsRes.count) * 100)
-        : 0,
+      conversionRate: viewsRes.count ? round2((paymentSuccess / viewsRes.count) * 100) : 0,
     };
 
     return NextResponse.json({
@@ -79,6 +100,19 @@ export async function GET() {
       // Surfaced so a dashboard can tell "no traffic yet" apart from "query
       // failed to scope" during an incident.
       paidEvents: paidEventsRes.count ?? 0,
+      operations: {
+        reservedUnpaid: reservations.count ?? 0,
+        paymentMinutes: medianMinutes(
+          (timings.data ?? []).map((o) => ({ start: o.created_at, end: o.paid_at })),
+        ),
+        dispatchMinutes: medianMinutes(
+          (timings.data ?? []).map((o) => ({
+            start: o.paid_at ?? o.created_at,
+            end: o.shipments?.[0]?.created_at ?? null,
+          })),
+        ),
+        sampleSize: timings.data?.length ?? 0,
+      },
     });
   } catch (error) {
     return apiErrorResponse("INTERNAL_ERROR", "Could not load analytics", 500, error);

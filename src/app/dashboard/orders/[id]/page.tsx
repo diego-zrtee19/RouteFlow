@@ -1,31 +1,19 @@
 "use client";
 
 import Image from "next/image";
+import { DeliveryArrangement } from "@/components/shared/DeliveryArrangement";
+import { logisticsGuidance } from "@/domain/operationalExperience";
 import React, { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Card } from "@/components/ui/Card";
 import { OrderMoney } from "@/components/dashboard/OrderMoney";
-import { Button } from "@/components/ui/Button";
-import {
-  OrderStatusBadge,
-  PaymentStatusBadge,
-  ShipmentStatusBadge,
-} from "@/components/ui/Badge";
-import {
-  ArrowLeft,
-  Truck,
-  ExternalLink,
-  ShieldCheck,
-  RotateCcw,
-} from "lucide-react";
+import { Button, buttonStyles } from "@/components/ui/Button";
+import { OrderStatusBadge, PaymentStatusBadge, ShipmentStatusBadge } from "@/components/ui/Badge";
+import { ArrowLeft, Truck, ExternalLink, ShieldCheck, RotateCcw } from "lucide-react";
 import { useI18n } from "@/i18n/LanguageProvider";
-import type {
-  Order,
-  ShipmentStatus,
-  ShippingProviderType,
-} from "@/domain/types";
+import type { Order, ShipmentStatus, ShippingProviderType } from "@/domain/types";
 
 const CARRIERS: ShippingProviderType[] = ["DHL", "FEDEX", "UBER"];
 
@@ -118,11 +106,15 @@ function parseSellerOrder(payload: unknown): SellerOrderView | null {
     buyerPhone: str(row, "buyerPhone"),
     shippingAddress: parseAddress(row.shippingAddress),
     shippingService: str(row, "shippingService") || null,
-    deliveryMethod:
-      (row.deliveryMethod as Order["deliveryMethod"]) || "shipping",
+    deliveryMethod: (row.deliveryMethod as Order["deliveryMethod"]) || "shipping",
     amount: Number(row.amount ?? 0),
     refundedAmount: Number(row.refundedAmount ?? 0),
-    finance: { platformFee: isRecord(row.finance) ? Number(row.finance.platformFee ?? 0) : 0, settlementStatus: isRecord(row.finance) ? str(row.finance, "settlementStatus", "PENDING") : "PENDING" },
+    finance: {
+      platformFee: isRecord(row.finance) ? Number(row.finance.platformFee ?? 0) : 0,
+      settlementStatus: isRecord(row.finance)
+        ? str(row.finance, "settlementStatus", "PENDING")
+        : "PENDING",
+    },
     currency: str(row, "currency", "MXN"),
     status: row.status as SellerOrderView["status"],
     paymentStatus: row.paymentStatus as SellerOrderView["paymentStatus"],
@@ -146,13 +138,8 @@ function parseSellerOrder(payload: unknown): SellerOrderView | null {
           trackingNumber: str(row.shipment, "trackingNumber"),
           status: row.shipment.status as ShipmentStatus,
           trackingUrl:
-            typeof row.shipment.trackingUrl === "string"
-              ? row.shipment.trackingUrl
-              : null,
-          labelUrl:
-            typeof row.shipment.labelUrl === "string"
-              ? row.shipment.labelUrl
-              : null,
+            typeof row.shipment.trackingUrl === "string" ? row.shipment.trackingUrl : null,
+          labelUrl: typeof row.shipment.labelUrl === "string" ? row.shipment.labelUrl : null,
         }
       : null,
   };
@@ -170,8 +157,7 @@ export default function OrderDetailPage() {
   // FedEx is preselected because it is the only carrier with credentials in
   // this environment (FEDEX_*); defaulting to DHL guaranteed a
   // NotConfiguredError. The seller may still pick any entry in CARRIERS.
-  const [selectedCarrier, setSelectedCarrier] =
-    useState<ShippingProviderType>("FEDEX");
+  const [selectedCarrier, setSelectedCarrier] = useState<ShippingProviderType>("FEDEX");
   const [shippingLoading, setShippingLoading] = useState(false);
   const [shippingError, setShippingError] = useState<string | null>(null);
   const [refundLoading, setRefundLoading] = useState(false);
@@ -198,12 +184,9 @@ export default function OrderDetailPage() {
 
   const refreshServerOrder = useCallback(async () => {
     try {
-      const res = await fetch(
-        `/api/dashboard/orders?id=${encodeURIComponent(orderId)}`,
-        {
-          cache: "no-store",
-        },
-      );
+      const res = await fetch(`/api/dashboard/orders?id=${encodeURIComponent(orderId)}`, {
+        cache: "no-store",
+      });
       if (res.ok) {
         const parsed = parseSellerOrder(await res.json());
         if (parsed) setOrder(parsed);
@@ -224,31 +207,22 @@ export default function OrderDetailPage() {
     setShippingLoading(true);
     setShippingError(null);
     try {
-      const res = await fetch(
-        `/api/orders/${encodeURIComponent(order.id)}/ship`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            provider: order.shippingService ? "FEDEX" : selectedCarrier,
-            serviceCode:
-              order.shippingService ||
-              (selectedCarrier === "FEDEX"
-                ? "STANDARD_OVERNIGHT"
-                : `${selectedCarrier}_EXPRESS`),
-          }),
-        },
-      );
+      const res = await fetch(`/api/orders/${encodeURIComponent(order.id)}/ship`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider: order.shippingService ? "FEDEX" : selectedCarrier,
+          serviceCode:
+            order.shippingService ||
+            (selectedCarrier === "FEDEX" ? "STANDARD_OVERNIGHT" : `${selectedCarrier}_EXPRESS`),
+        }),
+      });
       const data = await res.json();
       if (!res.ok)
-        throw new Error(
-          data.error?.message || data.message || t("dashboard.order.shipError"),
-        );
+        throw new Error(data.error?.message || data.message || t("dashboard.order.shipError"));
       await refreshServerOrder();
     } catch (error) {
-      setShippingError(
-        error instanceof Error ? error.message : t("dashboard.order.shipError"),
-      );
+      setShippingError(error instanceof Error ? error.message : t("dashboard.order.shipError"));
     } finally {
       setShippingLoading(false);
     }
@@ -267,17 +241,11 @@ export default function OrderDetailPage() {
       });
       const data = await res.json();
       if (!res.ok)
-        throw new Error(
-          data.error?.message || data.message || "No se pudo confirmar el NIP.",
-        );
+        throw new Error(data.error?.message || data.message || "No se pudo confirmar el NIP.");
       setDeliveryPin("");
       await refreshServerOrder();
     } catch (error) {
-      setDeliveryError(
-        error instanceof Error
-          ? error.message
-          : "No se pudo confirmar la entrega.",
-      );
+      setDeliveryError(error instanceof Error ? error.message : "No se pudo confirmar la entrega.");
     } finally {
       setDeliveryBusy(false);
     }
@@ -285,9 +253,7 @@ export default function OrderDetailPage() {
 
   const handleRefund = async () => {
     if (!order) return;
-    const amount = refundAmount
-      ? Number(refundAmount)
-      : order.amount - (order.refundedAmount ?? 0);
+    const amount = refundAmount ? Number(refundAmount) : order.amount - (order.refundedAmount ?? 0);
     if (
       !Number.isFinite(amount) ||
       amount <= 0 ||
@@ -296,12 +262,7 @@ export default function OrderDetailPage() {
       setRefundError("Indica un importe válido dentro del saldo restante");
       return;
     }
-    if (
-      !window.confirm(
-        `¿Reembolsar ${amount.toFixed(2)} ${order.currency} al comprador?`,
-      )
-    )
-      return;
+    if (!window.confirm(`¿Reembolsar ${amount.toFixed(2)} ${order.currency} al comprador?`)) return;
     const requestKey = refundKey ?? crypto.randomUUID();
     setRefundKey(requestKey);
     try {
@@ -315,23 +276,15 @@ export default function OrderDetailPage() {
     setRefundLoading(true);
     setRefundError(null);
     try {
-      const res = await fetch(
-        `/api/orders/${encodeURIComponent(order.id)}/refund`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount, requestKey }),
-        },
-      );
+      const res = await fetch(`/api/orders/${encodeURIComponent(order.id)}/refund`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, requestKey }),
+      });
       const result = await res.json();
-      if (!res.ok)
-        throw new Error(
-          result.error?.message || "No se pudo solicitar el reembolso",
-        );
+      if (!res.ok) throw new Error(result.error?.message || "No se pudo solicitar el reembolso");
       if (result.pending)
-        setRefundError(
-          "Reembolso en proceso. Se actualizará después de confirmarse en Stripe.",
-        );
+        setRefundError("Reembolso en proceso. Se actualizará después de confirmarse en Stripe.");
       else {
         setRefundKey(null);
         setRefundAmount("");
@@ -343,9 +296,7 @@ export default function OrderDetailPage() {
       }
       await refreshServerOrder();
     } catch (e) {
-      setRefundError(
-        e instanceof Error ? e.message : t("dashboard.order.refundError"),
-      );
+      setRefundError(e instanceof Error ? e.message : t("dashboard.order.refundError"));
     } finally {
       setRefundLoading(false);
     }
@@ -359,10 +310,11 @@ export default function OrderDetailPage() {
             {loaded ? t("dashboard.order.notFound") : t("common.loading")}
           </p>
           {loaded ? (
-            <Link href="/dashboard/orders">
-              <Button variant="outline" className="mt-4">
-                {t("dashboard.order.backCta")}
-              </Button>
+            <Link
+              href="/dashboard/orders"
+              className={buttonStyles({ variant: "outline", className: "mt-4" })}
+            >
+              {t("dashboard.order.backCta")}
             </Link>
           ) : null}
         </div>
@@ -375,82 +327,83 @@ export default function OrderDetailPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard/orders">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-1" />{" "}
-              {t("dashboard.order.backToOrders")}
-            </Button>
+      <div className="mx-auto max-w-6xl space-y-6 pb-8">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <Link href="/dashboard/orders" className={buttonStyles({ variant: "ghost", size: "sm" })}>
+            <ArrowLeft className="w-4 h-4 mr-1" /> {t("dashboard.order.backToOrders")}
           </Link>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-extrabold text-[#0B1220]">
-              {order.orderNumber}
-            </h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-semibold tracking-tight text-ink">{order.orderNumber}</h1>
             <OrderStatusBadge status={order.status} />
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <OrderMoney paid={order.paymentStatus === "SUCCEEDED" || order.paymentStatus === "REFUNDED"} total={order.amount} refunded={order.refundedAmount ?? 0} fee={order.finance.platformFee} itemTotal={order.items.reduce((sum, item) => sum + item.lineTotal, 0)} currency={order.currency} settlement={order.finance.settlementStatus} />
-            <Card className="p-5">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+            <Card className="p-5 sm:p-6">
+              <h2 className="text-lg font-semibold text-slate-900 mb-5">
                 {t("dashboard.order.item")}
-              </p>
-              {order.items.map(item => <div key={item.id} className="flex items-start gap-4 mb-4 last:mb-0">
-                <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
-                  {item.imageUrl ? (
-                    <Image
-                      src={item.imageUrl}
-                      alt=""
-                      width={64}
-                      height={64}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : null}
+              </h2>
+              {order.items.map((item) => (
+                <div key={item.id} className="flex items-start gap-4 mb-4 last:mb-0">
+                  <div className="w-20 h-20 rounded-lg bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
+                    {item.imageUrl ? (
+                      <Image
+                        src={item.imageUrl}
+                        alt=""
+                        width={64}
+                        height={64}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : null}
+                  </div>
+                  <div className="min-w-0 py-1">
+                    <h3 className="font-semibold text-base text-ink break-words">{item.title}</h3>
+                    <p className="text-sm leading-relaxed text-slate-600 mt-2">
+                      Cantidad: {item.quantity} · ${item.unitPrice.toFixed(2)} por unidad · $
+                      {item.lineTotal.toFixed(2)} {order.currency}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-bold text-sm text-[#0B1220]">
-                    {item.title}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Cantidad: {item.quantity} · ${item.unitPrice.toFixed(2)} por unidad · ${item.lineTotal.toFixed(2)} {order.currency}
-                  </p>
-                </div>
-              </div>)}
+              ))}
             </Card>
 
-            <Card className="p-5">
+            <Card className="p-5 sm:p-6 space-y-4">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                <h2 className="text-lg font-semibold text-slate-900">
                   {t("dashboard.order.shipping")}
-                </p>
-                {order.shipment ? (
-                  <ShipmentStatusBadge status={order.shipment.status} />
-                ) : null}
+                </h2>
+                {order.shipment ? <ShipmentStatusBadge status={order.shipment.status} /> : null}
               </div>
+              {order.shipment && (
+                <p
+                  role="status"
+                  className="border border-amber-200 rounded-lg p-4 bg-amber-50 text-sm leading-relaxed text-amber-900"
+                >
+                  {logisticsGuidance(order.shipment.status)}
+                </p>
+              )}
+              {order.deliveryMethod !== "shipping" && (
+                <DeliveryArrangement
+                  orderId={order.id}
+                  audience="seller"
+                  editable={["PAID", "READY_TO_SHIP"].includes(order.status)}
+                />
+              )}
 
               {order.deliveryMethod !== "shipping" ? (
                 <div className="space-y-3">
-                  <h2 className="font-bold">Entrega coordinada con NIP</h2>
+                  <h2 className="font-semibold">Entrega coordinada con NIP</h2>
                   {order.status === "COMPLETED" ? (
                     <p className="text-emerald-700 font-semibold">
                       Entrega confirmada y pedido completado.
                     </p>
                   ) : (
-                    <form
-                      onSubmit={handleCompleteDelivery}
-                      className="space-y-3"
-                    >
+                    <form onSubmit={handleCompleteDelivery} className="space-y-3">
                       <p className="text-sm text-slate-600">
-                        Entrega el producto y solicita al comprador su NIP de
-                        seis dígitos.
+                        Entrega el producto y solicita al comprador su NIP de seis dígitos.
                       </p>
-                      <label
-                        className="block text-sm font-semibold"
-                        htmlFor="delivery-pin"
-                      >
+                      <label className="block text-sm font-semibold" htmlFor="delivery-pin">
                         NIP del comprador
                       </label>
                       <input
@@ -461,23 +414,15 @@ export default function OrderDetailPage() {
                         required
                         autoComplete="off"
                         value={deliveryPin}
-                        onChange={(e) =>
-                          setDeliveryPin(e.target.value.replace(/\D/g, ""))
-                        }
-                        className="border rounded-lg p-3 font-mono tracking-widest"
+                        onChange={(e) => setDeliveryPin(e.target.value.replace(/\D/g, ""))}
+                        className="block w-full max-w-xs border border-slate-300 rounded-lg p-4 text-xl font-mono tracking-widest bg-slate-50"
                         disabled={!isPaid || deliveryBusy}
                       />
                       <Button
                         type="submit"
-                        disabled={
-                          !isPaid ||
-                          deliveryBusy ||
-                          !/^\d{6}$/.test(deliveryPin)
-                        }
+                        disabled={!isPaid || deliveryBusy || !/^\d{6}$/.test(deliveryPin)}
                       >
-                        {deliveryBusy
-                          ? "Verificando…"
-                          : "Confirmar entrega y completar pedido"}
+                        {deliveryBusy ? "Verificando…" : "Confirmar entrega y completar pedido"}
                       </Button>
                       {deliveryError && (
                         <p role="alert" className="text-sm text-rose-700">
@@ -488,21 +433,19 @@ export default function OrderDetailPage() {
                   )}
                 </div>
               ) : order.shipment ? (
-                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm space-y-2">
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-200 text-sm space-y-2">
                   <p>
-                    <strong>{t("common.carrier")}:</strong>{" "}
-                    {order.shipment.carrierName}
+                    <strong>{t("common.carrier")}:</strong> {order.shipment.carrierName}
                   </p>
                   <p>
-                    <strong>{t("common.tracking")}:</strong>{" "}
-                    {order.shipment.trackingNumber}
+                    <strong>{t("common.tracking")}:</strong> {order.shipment.trackingNumber}
                   </p>
                   {order.shipment.labelUrl && (
                     <a
                       href={`/api/orders/${order.id}/label`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-block text-blue-700 underline font-semibold"
+                      className="inline-block text-accent-700 underline font-semibold"
                     >
                       Imprimir / descargar etiqueta PDF
                     </a>
@@ -517,11 +460,14 @@ export default function OrderDetailPage() {
                       href={order.shipment.trackingUrl}
                       target="_blank"
                       rel="noreferrer"
+                      className={buttonStyles({
+                        variant: "outline",
+                        size: "sm",
+                        className: "mt-2",
+                      })}
                     >
-                      <Button variant="outline" size="sm" className="mt-2">
-                        {t("dashboard.order.viewTracking")}{" "}
-                        <ExternalLink className="w-3.5 h-3.5 ml-1" />
-                      </Button>
+                      {t("dashboard.order.viewTracking")}{" "}
+                      <ExternalLink className="w-3.5 h-3.5 ml-1" />
                     </Link>
                   ) : null}
                 </div>
@@ -533,9 +479,7 @@ export default function OrderDetailPage() {
                     </p>
                   ) : (
                     <>
-                      <p className="text-xs text-slate-600">
-                        {t("dashboard.order.selectCourier")}
-                      </p>
+                      <p className="text-xs text-slate-600">{t("dashboard.order.selectCourier")}</p>
                       <div className="grid grid-cols-3 gap-2">
                         {CARRIERS.map((c) => (
                           <button
@@ -544,7 +488,7 @@ export default function OrderDetailPage() {
                             onClick={() => setSelectedCarrier(c)}
                             className={`p-2.5 text-center rounded-lg border text-xs font-bold ${
                               selectedCarrier === c
-                                ? "border-blue-600 bg-blue-50 text-blue-700"
+                                ? "border-accent-600 bg-accent-50 text-accent-700"
                                 : "border-slate-200"
                             }`}
                           >
@@ -553,9 +497,7 @@ export default function OrderDetailPage() {
                         ))}
                       </div>
                       {shippingError ? (
-                        <p className="text-xs text-rose-600 font-semibold">
-                          {shippingError}
-                        </p>
+                        <p className="text-xs text-rose-600 font-semibold">{shippingError}</p>
                       ) : null}
                       <Button
                         onClick={handleCreateShipment}
@@ -575,18 +517,18 @@ export default function OrderDetailPage() {
           </div>
 
           <div className="space-y-6">
-            <Card className="p-5 space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                {t("common.buyer")}
-              </p>
+            <Card className="p-5 space-y-3">
+              <h2 className="text-base font-semibold text-slate-900">{t("common.buyer")}</h2>
               <p className="text-sm font-semibold">{order.buyerName}</p>
-              <p className="text-xs text-slate-500">{order.buyerEmail}</p>
-              <p className="text-xs text-slate-500">{order.buyerPhone}</p>
+              <p className="text-sm text-slate-600 break-all">{order.buyerEmail}</p>
+              <p className="text-sm text-slate-600">{order.buyerPhone}</p>
             </Card>
 
             <Card className="p-5 space-y-2">
-              <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                {t("common.payment")}
+              <h2 className="text-base font-semibold text-slate-900">{t("common.payment")}</h2>
+              <p className="text-2xl font-bold tracking-tight text-slate-900">
+                ${order.amount.toFixed(2)}{" "}
+                <span className="text-sm font-medium text-slate-500">{order.currency}</span>
               </p>
               <PaymentStatusBadge status={order.paymentStatus} />
               {/*
@@ -596,50 +538,67 @@ export default function OrderDetailPage() {
               */}
               {isPaid ? (
                 <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> Pago
-                  confirmado en Stripe
+                  <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> Pago confirmado en Stripe
                 </p>
               ) : null}
               {canRefund ? (
-                <div className="pt-2 space-y-2">
-                  <p className="text-xs">
-                    Devuelto: {(order.refundedAmount ?? 0).toFixed(2)}{" "}
-                    {order.currency}. Disponible:{" "}
-                    {(order.amount - (order.refundedAmount ?? 0)).toFixed(2)}{" "}
-                    {order.currency}.
-                  </p>
-                  <label className="block text-xs">
-                    Importe a reembolsar (vacío = saldo restante)
-                    <input
-                      aria-label="Importe a reembolsar"
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      max={order.amount - (order.refundedAmount ?? 0)}
-                      value={refundAmount}
-                      disabled={refundLoading || !!refundKey}
-                      onChange={(e) => setRefundAmount(e.target.value)}
-                      className="w-full border rounded-sm p-2"
-                    />
-                  </label>
-                  {refundError ? (
-                    <p className="text-xs text-rose-600 font-semibold">
-                      {refundError}
-                    </p>
-                  ) : null}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={handleRefund}
-                    isLoading={refundLoading}
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 mr-1.5" />{" "}
+                <details
+                  className="pt-3 border-t border-slate-100"
+                  open={!!refundError || !!refundKey}
+                >
+                  <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-slate-700">
                     {t("dashboard.order.refund")}
-                  </Button>
-                </div>
+                  </summary>
+                  <div className="space-y-3 pb-2">
+                    <p className="text-xs">
+                      Devuelto: {(order.refundedAmount ?? 0).toFixed(2)} {order.currency}.
+                      Disponible: {(order.amount - (order.refundedAmount ?? 0)).toFixed(2)}{" "}
+                      {order.currency}.
+                    </p>
+                    <label className="block text-xs">
+                      Importe a reembolsar (vacío = saldo restante)
+                      <input
+                        aria-label="Importe a reembolsar"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        max={order.amount - (order.refundedAmount ?? 0)}
+                        value={refundAmount}
+                        disabled={refundLoading || !!refundKey}
+                        onChange={(e) => setRefundAmount(e.target.value)}
+                        className="w-full border border-slate-300 rounded-lg p-3 mt-2"
+                      />
+                    </label>
+                    {refundError ? (
+                      <p className="text-xs text-rose-600 font-semibold">{refundError}</p>
+                    ) : null}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={handleRefund}
+                      isLoading={refundLoading}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 mr-1.5" /> {t("dashboard.order.refund")}
+                    </Button>
+                  </div>
+                </details>
               ) : null}
             </Card>
+            <details className="rounded-lg border border-slate-200 bg-white overflow-hidden">
+              <summary className="min-h-12 cursor-pointer p-5 text-base font-semibold text-slate-900">
+                Dinero de este pedido
+              </summary>
+              <OrderMoney
+                paid={order.paymentStatus === "SUCCEEDED" || order.paymentStatus === "REFUNDED"}
+                total={order.amount}
+                refunded={order.refundedAmount ?? 0}
+                fee={order.finance.platformFee}
+                itemTotal={order.items.reduce((sum, item) => sum + item.lineTotal, 0)}
+                currency={order.currency}
+                settlement={order.finance.settlementStatus}
+              />
+            </details>
           </div>
         </div>
       </div>

@@ -68,7 +68,7 @@ export interface PublicPurchaseLinkView {
 export function toPublicPurchaseLinkView(
   link: PurchaseLink,
   product: Product,
-  seller: Seller
+  seller: Seller,
 ): PublicPurchaseLinkView {
   return {
     publicId: link.publicId,
@@ -78,11 +78,7 @@ export function toPublicPurchaseLinkView(
       description: product.description,
       price: product.price,
       currency: product.currency,
-      images: product.images.length
-        ? product.images
-        : product.imageUrl
-          ? [product.imageUrl]
-          : [],
+      images: product.images.length ? product.images : product.imageUrl ? [product.imageUrl] : [],
       // Expose a boolean, never the raw stock level.
       inStock: product.stock > 0 && product.isActive,
       deliveryOptions: product.deliveryOptions,
@@ -146,6 +142,7 @@ export interface BuyerOrderView {
   shipment: BuyerShipmentView | null;
   createdAt: string;
   paidAt: string | null;
+  updatedAt?: string;
   canConfirm: boolean;
   canDispute: boolean;
   dispute: { id: string; reason: DisputeReason; status: DisputeStatus; createdAt: string } | null;
@@ -155,7 +152,7 @@ export function toBuyerOrderView(
   order: Order,
   shipment: Shipment | null,
   shipmentEvents: ShipmentEvent[],
-  dispute: Dispute | null
+  dispute: Dispute | null,
 ): BuyerOrderView {
   const sorted = [...shipmentEvents].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
   const lastEvent = sorted[0] ?? null;
@@ -186,7 +183,6 @@ export function toBuyerOrderView(
       lineTotal: item.lineTotal,
     })),
     shipment: shipment
-
       ? {
           carrierName: shipment.carrierName,
           trackingNumber: shipment.trackingNumber,
@@ -200,14 +196,22 @@ export function toBuyerOrderView(
       : null,
     createdAt: order.createdAt,
     paidAt: order.paidAt,
-    canConfirm: order.status === "DELIVERED" || order.status === "IN_TRANSIT",
+    updatedAt: order.updatedAt,
+    canConfirm:
+      order.paymentStatus === "SUCCEEDED" &&
+      ["DELIVERED", "BUYER_CONFIRMED"].includes(order.status),
     canDispute:
       order.paymentStatus === "SUCCEEDED" &&
       order.status !== "REFUNDED" &&
       order.status !== "CANCELLED" &&
       dispute === null,
     dispute: dispute
-      ? { id: dispute.id, reason: dispute.reason, status: dispute.status, createdAt: dispute.createdAt }
+      ? {
+          id: dispute.id,
+          reason: dispute.reason,
+          status: dispute.status,
+          createdAt: dispute.createdAt,
+        }
       : null,
   };
 }
@@ -262,7 +266,7 @@ export interface SellerOrderView {
 /** Standalone shipment DTO for the buyer tracking view. */
 export function toBuyerShipmentView(
   shipment: Shipment,
-  shipmentEvents: ShipmentEvent[]
+  shipmentEvents: ShipmentEvent[],
 ): BuyerShipmentView {
   const sorted = [...shipmentEvents].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt));
   const lastEvent = sorted[0] ?? null;
@@ -325,18 +329,17 @@ export interface SellerProductView {
   publicLinkId: string | null;
 }
 
-export function toSellerProductView(product: Product, publicLinkId: string | null): SellerProductView {
+export function toSellerProductView(
+  product: Product,
+  publicLinkId: string | null,
+): SellerProductView {
   return {
     id: product.id,
     title: product.title,
     description: product.description,
     price: product.price,
     currency: product.currency,
-    images: product.images.length
-      ? product.images
-      : product.imageUrl
-        ? [product.imageUrl]
-        : [],
+    images: product.images.length ? product.images : product.imageUrl ? [product.imageUrl] : [],
     stock: product.stock,
     isActive: product.isActive,
     deliveryOptions: product.deliveryOptions,

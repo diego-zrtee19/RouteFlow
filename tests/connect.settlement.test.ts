@@ -197,9 +197,7 @@ describe("Connect settlement", () => {
       data: null,
       error: new Error("Settlement in progress"),
     });
-    await expect(prepareRefund("order-test")).rejects.toThrow(
-      "Settlement in progress",
-    );
+    await expect(prepareRefund("order-test")).rejects.toThrow("Settlement in progress");
     expect(mocks.reversal).not.toHaveBeenCalled();
   });
 });

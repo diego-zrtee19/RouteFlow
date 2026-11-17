@@ -25,7 +25,7 @@ import { DatabaseError } from "@/lib/errors";
  * every product created without an explicit stock permanently unsellable:
  * `createOrderFromPurchaseLink` refuses a product at zero, so the storefront
  * listed it while checkout rejected it. The database default is corrected by
- * `supabase_schema_v4_stock.sql`; this constant keeps the application in step
+ * `supabase/schemas/supabase_schema_v4_stock.sql`; this constant keeps the application in step
  * with it, so a missing value means "buyable", never "not for sale".
  */
 export const DEFAULT_STOCK = 10;
@@ -66,10 +66,7 @@ export interface CreateProductInput {
 }
 
 /** Creates a product owned by `seller`. */
-export async function insertProduct(
-  seller: Seller,
-  input: CreateProductInput
-): Promise<Product> {
+export async function insertProduct(seller: Seller, input: CreateProductInput): Promise<Product> {
   const admin = getSupabaseAdmin();
 
   const { data, error } = await admin
@@ -116,7 +113,7 @@ export async function listProductsForSeller(seller: Seller): Promise<Product[]> 
 /** A single product, scoped to its owner. Returns null if it is not theirs. */
 export async function findProductForSeller(
   productId: string,
-  seller: Seller
+  seller: Seller,
 ): Promise<Product | null> {
   const admin = getSupabaseAdmin();
   const { data, error } = await admin
@@ -134,7 +131,7 @@ export async function findProductForSeller(
 export async function updateProduct(
   productId: string,
   seller: Seller,
-  patch: Partial<CreateProductInput> & { isActive?: boolean }
+  patch: Partial<CreateProductInput> & { isActive?: boolean },
 ): Promise<Product | null> {
   const admin = getSupabaseAdmin();
 

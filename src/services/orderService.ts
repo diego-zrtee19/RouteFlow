@@ -1,7 +1,7 @@
 import type { DomainEvent, Order, OrderItem, Seller } from "@/domain/types";
 import { assertTransition } from "@/domain/orderStateMachine";
 import { hashBuyerToken, verifyBuyerToken } from "@/lib/buyerToken";
-import { DatabaseError } from "@/lib/errors";
+import { AppError, DatabaseError } from "@/lib/errors";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getStripe, isStripeConfigured } from "@/lib/stripe";
 
@@ -23,10 +23,7 @@ import { getStripe, isStripeConfigured } from "@/lib/stripe";
 const ORDER_COLUMNS = "*";
 
 /** Loads an order for a seller, scoped to that seller. */
-export async function findOrderForSeller(
-  orderId: string,
-  seller: Seller
-): Promise<Order | null> {
+export async function findOrderForSeller(orderId: string, seller: Seller): Promise<Order | null> {
   const admin = getSupabaseAdmin();
   const { data, error } = await admin
     .from("orders")
@@ -62,7 +59,7 @@ export async function listOrdersForSeller(seller: Seller): Promise<Order[]> {
  */
 export async function findOrderForBuyer(
   orderId: string,
-  buyerToken: string | null | undefined
+  buyerToken: string | null | undefined,
 ): Promise<Order | null> {
   if (!buyerToken) return null;
 
@@ -105,10 +102,7 @@ export async function findOrderByToken(buyerToken: string): Promise<Order | null
  * own. Now a transition the state machine rejects cannot reach the database,
  * and every caller gets the same error.
  */
-export async function transitionOrder(
-  order: Order,
-  to: Order["status"]
-): Promise<Order> {
+export async function transitionOrder(order: Order, to: Order["status"]): Promise<Order> {
   assertTransition(order.status, to);
 
   // Re-applying the current status is a no-op: Stripe redelivers webhooks and a
@@ -125,11 +119,14 @@ export async function transitionOrder(
     .from("orders")
     .update(patch)
     .eq("id", order.id)
-    .eq("seller_id", order.sellerId) // ownership re-asserted at write time
+    .eq("seller_id", order.sellerId)
+    .eq("status", order.status) // Compare-and-set: a concurrent dispute wins.
+    .eq("payment_status", order.paymentStatus)
     .select(`${ORDER_COLUMNS}, order_items(*)`)
-    .single();
+    .maybeSingle();
 
   if (error) throw new DatabaseError(`Could not update order: ${error.message}`);
+  if (!data) throw new AppError("CONFLICT", "El pedido cambió. Actualiza antes de continuar.", 409);
   return rowToOrder(data as Record<string, unknown>);
 }
 
@@ -150,7 +147,7 @@ export async function transitionOrder(
  */
 export async function findOrderByStripeSessionForBuyer(
   orderId: string,
-  sessionId: string | null | undefined
+  sessionId: string | null | undefined,
 ): Promise<Order | null> {
   if (!orderId || !sessionId || !isStripeConfigured()) return null;
 
@@ -193,7 +190,7 @@ export async function recordEvent(
     Partial<Pick<DomainEvent, "sellerId" | "orderId" | "purchaseLinkId" | "productId">> &
     Partial<Pick<DomainEvent, "amount" | "currency">> & {
       metadata?: DomainEvent["metadata"];
-    }
+    },
 ): Promise<void> {
   const admin = getSupabaseAdmin();
   const { error } = await admin.from("events").insert({

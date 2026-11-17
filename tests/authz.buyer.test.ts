@@ -113,7 +113,7 @@ describe("identifier generation", () => {
   });
 
   it("public ids match the DB CHECK constraint", () => {
-    // supabase_schema_v3.sql: public_id ~ '^[A-Z0-9]{6,16}$'
+    // supabase/schemas/supabase_schema_v3.sql: public_id ~ '^[A-Z0-9]{6,16}$'
     const ids = Array.from({ length: 500 }, () => generatePublicId());
     for (const id of ids) {
       expect(id).toMatch(/^[A-Z0-9]{8}$/);

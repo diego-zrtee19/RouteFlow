@@ -40,4 +40,3 @@ export function getStripe(): Stripe {
   }
   return stripeClient;
 }
-

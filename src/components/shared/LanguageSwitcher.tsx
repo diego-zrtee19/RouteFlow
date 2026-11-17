@@ -19,10 +19,7 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
 }) => {
   const { locale, setLocale, t } = useI18n();
 
-  const container =
-    variant === "dark"
-      ? "border-slate-700 bg-slate-800/70"
-      : "border-slate-200 bg-slate-50";
+  const container = variant === "dark" ? "border-white/25 bg-white/10" : "border-line bg-surface";
 
   return (
     <div
@@ -34,12 +31,12 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
         const isActive = locale === code;
         const active =
           variant === "dark"
-            ? "bg-slate-900 text-white shadow-xs"
-            : "bg-white text-[#0B1220] shadow-xs";
+            ? "bg-white text-accent-900 shadow-sm"
+            : "bg-accent-700 text-white shadow-sm";
         const idle =
           variant === "dark"
-            ? "text-slate-300 hover:text-white"
-            : "text-slate-500 hover:text-[#0B1220]";
+            ? "text-white/85 hover:bg-white/10 hover:text-white"
+            : "text-slate-600 hover:bg-accent-50 hover:text-accent-700";
 
         return (
           <button
@@ -48,7 +45,7 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
             onClick={() => setLocale(code)}
             aria-pressed={isActive}
             title={t("language.switchTo", { language: LOCALE_NAMES[code] })}
-            className={`px-2 py-1 text-[11px] font-semibold rounded-md transition-colors ${
+            className={`min-h-9 min-w-9 px-2.5 py-1.5 text-xs font-semibold rounded-md transition-colors ${
               isActive ? active : idle
             }`}
           >

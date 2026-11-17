@@ -1,4 +1,10 @@
-import { ShippingProvider, RateInput, CreateShipmentInput, ShipmentResult, TrackingResult } from "./types";
+import {
+  ShippingProvider,
+  RateInput,
+  CreateShipmentInput,
+  ShipmentResult,
+  TrackingResult,
+} from "./types";
 import { ShippingRate, ShipmentStatus } from "@/domain/types";
 
 /**

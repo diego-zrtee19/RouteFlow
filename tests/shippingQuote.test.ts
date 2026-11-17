@@ -17,13 +17,11 @@ describe("shipping quote integrity", () => {
       quoteFingerprint({ ...address, postalCode: "99999" }, {}, 3, {}),
     ));
   it("invalidates after package weight changes", () =>
-    expect(quoteFingerprint(address, {}, 3, {})).not.toBe(
-      quoteFingerprint(address, {}, 4, {}),
-    ));
+    expect(quoteFingerprint(address, {}, 3, {})).not.toBe(quoteFingerprint(address, {}, 4, {})));
   it("invalidates after dimensions or origin changes", () => {
-    expect(
-      quoteFingerprint(address, { city: "A" }, 3, { length: 10 }),
-    ).not.toBe(quoteFingerprint(address, { city: "B" }, 3, { length: 10 }));
+    expect(quoteFingerprint(address, { city: "A" }, 3, { length: 10 })).not.toBe(
+      quoteFingerprint(address, { city: "B" }, 3, { length: 10 }),
+    );
     expect(quoteFingerprint(address, {}, 3, { length: 10 })).not.toBe(
       quoteFingerprint(address, {}, 3, { length: 20 }),
     );

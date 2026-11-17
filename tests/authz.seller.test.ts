@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { assertSellerOwns, type AuthzResult } from "@/lib/authz";
-import {
-  isTransientSupabaseError,
-  retryOnTransientSupabaseError,
-} from "@/lib/supabaseRetry";
+import { isTransientSupabaseError, retryOnTransientSupabaseError } from "@/lib/supabaseRetry";
 import type { Seller } from "@/domain/types";
 import { TEST_SELLER_A, TEST_SELLER_B, makeOrder, makeSellerBOrder } from "./fixtures";
 
@@ -20,10 +17,7 @@ import { TEST_SELLER_A, TEST_SELLER_B, makeOrder, makeSellerBOrder } from "./fix
 
 describe("seller ownership", () => {
   it("allows a seller to act on their own resource", () => {
-    const result: AuthzResult<Seller> = assertSellerOwns(
-      TEST_SELLER_A,
-      TEST_SELLER_A.id
-    );
+    const result: AuthzResult<Seller> = assertSellerOwns(TEST_SELLER_A, TEST_SELLER_A.id);
     expect(result.ok).toBe(true);
   });
 
@@ -62,7 +56,7 @@ describe("transient Supabase failures do not become 500s", () => {
     // The exact production error that stranded the user: PostgREST validating
     // the key's `iat` against an edge node whose clock had drifted ahead.
     expect(
-      isTransientSupabaseError(new Error("Could not resolve seller: JWT issued at future"))
+      isTransientSupabaseError(new Error("Could not resolve seller: JWT issued at future")),
     ).toBe(true);
   });
 
@@ -111,8 +105,8 @@ describe("transient Supabase failures do not become 500s", () => {
           calls++;
           throw new Error("fetch failed");
         },
-        { attempts: 3, baseDelayMs: 1 }
-      )
+        { attempts: 3, baseDelayMs: 1 },
+      ),
     ).rejects.toThrow("fetch failed");
     expect(calls).toBe(3);
   });
@@ -125,8 +119,8 @@ describe("transient Supabase failures do not become 500s", () => {
           calls++;
           throw new Error("duplicate key value violates unique constraint");
         },
-        { attempts: 5, baseDelayMs: 1 }
-      )
+        { attempts: 5, baseDelayMs: 1 },
+      ),
     ).rejects.toThrow();
     expect(calls).toBe(1);
   });

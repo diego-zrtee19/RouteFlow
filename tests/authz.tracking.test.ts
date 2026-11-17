@@ -117,7 +117,10 @@ describe("tracking REFRESH authorization (seller-only)", () => {
 
   it("rejects a seller session flagged as unauthenticated", () => {
     // Defensive: a seller object without a session must not be trusted.
-    const access = authorizeTrackingRefresh(orderA, { seller: TEST_SELLER_A, authenticated: false });
+    const access = authorizeTrackingRefresh(orderA, {
+      seller: TEST_SELLER_A,
+      authenticated: false,
+    });
     expect(access.ok).toBe(false);
   });
 });

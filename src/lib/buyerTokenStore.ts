@@ -28,6 +28,29 @@
  */
 
 const STORAGE_PREFIX = "routeflow.buyerToken.";
+const REMEMBER_MS = 30 * 24 * 60 * 60 * 1000;
+function readRemembered(key: string): string | null {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    if (
+      typeof saved.value !== "string" ||
+      !Number.isFinite(saved.expiresAt) ||
+      saved.expiresAt <= Date.now() ||
+      saved.expiresAt > Date.now() + REMEMBER_MS
+    ) {
+      window.localStorage.removeItem(key);
+      return null;
+    }
+    return saved.value;
+  } catch {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {}
+    return null;
+  }
+}
 
 /** Parks the token for an order. Never throws: losing the token must not fail a purchase. */
 export function storeBuyerToken(orderId: string, token: string): void {
@@ -46,7 +69,10 @@ export function readBuyerToken(orderId: string): string | null {
   if (!orderId) return null;
 
   try {
-    return window.sessionStorage.getItem(`${STORAGE_PREFIX}${orderId}`) ?? window.localStorage.getItem(`${STORAGE_PREFIX}${orderId}`);
+    return (
+      window.sessionStorage.getItem(`${STORAGE_PREFIX}${orderId}`) ??
+      readRemembered(`${STORAGE_PREFIX}${orderId}`)
+    );
   } catch {
     return null;
   }
@@ -59,25 +85,53 @@ export function clearBuyerToken(orderId: string): void {
   try {
     window.sessionStorage.removeItem(`${STORAGE_PREFIX}${orderId}`);
     window.localStorage.removeItem(`${STORAGE_PREFIX}${orderId}`);
+    window.sessionStorage.removeItem(`routeflow.buyerSession.${orderId}`);
+    window.localStorage.removeItem(`routeflow.buyerSession.${orderId}`);
   } catch {
     // Nothing to do; the token simply expires with the tab.
   }
 }
 
 export function storeBuyerSession(orderId: string, sessionId: string): void {
-  try { window.sessionStorage.setItem(`routeflow.buyerSession.${orderId}`, sessionId); } catch { /* optional */ }
+  try {
+    window.sessionStorage.setItem(`routeflow.buyerSession.${orderId}`, sessionId);
+  } catch {
+    /* optional */
+  }
 }
 
 export function readBuyerSession(orderId: string): string | null {
-  try { return window.sessionStorage.getItem(`routeflow.buyerSession.${orderId}`) ?? window.localStorage.getItem(`routeflow.buyerSession.${orderId}`); } catch { return null; }
+  try {
+    return (
+      window.sessionStorage.getItem(`routeflow.buyerSession.${orderId}`) ??
+      readRemembered(`routeflow.buyerSession.${orderId}`)
+    );
+  } catch {
+    return null;
+  }
 }
 
 /** Explicit buyer opt-in, never automatic on a shared device. */
-export function rememberBuyerAccess(orderId: string, token: string | null, session: string | null): boolean {
+export function rememberBuyerAccess(
+  orderId: string,
+  token: string | null,
+  session: string | null,
+): boolean {
   try {
     if (!token && !session) return false;
-    if (token) window.localStorage.setItem(`${STORAGE_PREFIX}${orderId}`, token);
-    if (session) window.localStorage.setItem(`routeflow.buyerSession.${orderId}`, session);
+    const expiresAt = Date.now() + REMEMBER_MS;
+    if (token)
+      window.localStorage.setItem(
+        `${STORAGE_PREFIX}${orderId}`,
+        JSON.stringify({ value: token, expiresAt }),
+      );
+    if (session)
+      window.localStorage.setItem(
+        `routeflow.buyerSession.${orderId}`,
+        JSON.stringify({ value: session, expiresAt }),
+      );
     return true;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 }

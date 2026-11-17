@@ -4,20 +4,14 @@ import { apiErrorResponse } from "@/lib/apiResponse";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { generatePublicId } from "@/lib/buyerToken";
 import { DatabaseError } from "@/lib/errors";
-import {
-  normaliseStock,
-  DEFAULT_STOCK,
-} from "@/repositories/catalogRepository";
+import { normaliseStock, DEFAULT_STOCK } from "@/repositories/catalogRepository";
 import type { DeliveryMethod } from "@/domain/types";
 import { validateVariants } from "@/domain/catalogCart";
+import { validateProductDetails } from "@/domain/operationalExperience";
 
 export const runtime = "nodejs";
 
-const ALLOWED_DELIVERY: readonly string[] = [
-  "shipping",
-  "local_delivery",
-  "meetup",
-];
+const ALLOWED_DELIVERY: readonly string[] = ["shipping", "local_delivery", "meetup"];
 
 interface CreateProductBody {
   catalogVisible?: unknown;
@@ -51,20 +45,21 @@ export async function GET() {
   try {
     const admin = getSupabaseAdmin();
 
+    const [{ data: products, error: productError }, { data: links, error: linkError }] =
+      await Promise.all([
+        admin
+          .from("products")
+          .select("*,product_variants(id,label,price,stock,is_active)")
+          .eq("seller_id", auth.value.id)
+          .order("created_at", { ascending: false }),
+        admin
+          .from("purchase_links")
+          .select("*")
+          .eq("seller_id", auth.value.id)
+          .order("created_at", { ascending: false }),
+      ]);
 
-    const [{ data: products }, { data: links }] = await Promise.all([
-      admin
-        .from("products")
-        .select("*,product_variants(id,label,price,stock,is_active)")
-        .eq("seller_id", auth.value.id)
-        .order("created_at", { ascending: false }),
-      admin
-        .from("purchase_links")
-        .select("*")
-        .eq("seller_id", auth.value.id)
-        .order("created_at", { ascending: false }),
-    ]);
-
+    if (productError || linkError) throw productError || linkError;
     return NextResponse.json({
       links: (links ?? []).map((link) => ({
         id: link.id,
@@ -77,6 +72,8 @@ export async function GET() {
       products: (products ?? []).map((product) => ({
         id: product.id,
         title: product.title,
+        description: product.description ?? "",
+        updatedAt: product.updated_at,
         price: Number(product.price),
         currency: product.currency,
         images: product.images ?? [],
@@ -91,12 +88,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    return apiErrorResponse(
-      "INTERNAL_ERROR",
-      "Could not load the catalog",
-      500,
-      error,
-    );
+    return apiErrorResponse("INTERNAL_ERROR", "Could not load the catalog", 500, error);
   }
 }
 
@@ -119,8 +111,7 @@ export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => ({}))) as CreateProductBody;
 
   const title = typeof body.title === "string" ? body.title.trim() : "";
-  const description =
-    typeof body.description === "string" ? body.description.trim() : "";
+  const description = typeof body.description === "string" ? body.description.trim() : "";
   const price = Number(body.price);
   // `normaliseStock` is shared with the repository so the route and the data
   // layer can never disagree about what "no stock given" means. The old inline
@@ -128,26 +119,14 @@ export async function POST(req: NextRequest) {
   // produced an unsellable product.
   const stock = normaliseStock(body.stock);
   const weightKg = body.weightKg === undefined ? null : Number(body.weightKg);
-  if (
-    weightKg !== null &&
-    (!Number.isFinite(weightKg) || weightKg <= 0 || weightKg > 1000)
-  ) {
-    return apiErrorResponse(
-      "VALIDATION_ERROR",
-      "Provide a valid package weight in kilograms",
-      400,
-    );
+  if (weightKg !== null && (!Number.isFinite(weightKg) || weightKg <= 0 || weightKg > 1000)) {
+    return apiErrorResponse("VALIDATION_ERROR", "Provide a valid package weight in kilograms", 400);
   }
   const currency =
-    typeof body.currency === "string"
-      ? body.currency.toUpperCase().slice(0, 3)
-      : "MXN";
+    typeof body.currency === "string" ? body.currency.toUpperCase().slice(0, 3) : "MXN";
   const images = Array.isArray(body.images)
     ? body.images
-        .filter(
-          (src: unknown): src is string =>
-            typeof src === "string" && src.length > 0,
-        )
+        .filter((src: unknown): src is string => typeof src === "string" && src.length > 0)
         .slice(0, 4)
     : [];
   const requestedDelivery = Array.isArray(body.deliveryOptions)
@@ -155,41 +134,93 @@ export async function POST(req: NextRequest) {
         ALLOWED_DELIVERY.includes(option as string),
       )
     : [];
-  const deliveryOptions = requestedDelivery.length
-    ? requestedDelivery
-    : ["shipping"];
+  const deliveryOptions = requestedDelivery.length ? requestedDelivery : ["shipping"];
 
-  if (body.dimensions !== undefined && (!body.dimensions || typeof body.dimensions !== "object" || ["length", "width", "height"].some(k => !Number.isInteger((body.dimensions as Record<string, unknown>)[k]) || Number((body.dimensions as Record<string, unknown>)[k]) < 1 || Number((body.dimensions as Record<string, unknown>)[k]) > 300))) return apiErrorResponse("VALIDATION_ERROR", "Dimensiones enteras de 1 a 300 cm", 400);
+  if (
+    body.dimensions !== undefined &&
+    (!body.dimensions ||
+      typeof body.dimensions !== "object" ||
+      ["length", "width", "height"].some(
+        (k) =>
+          !Number.isInteger((body.dimensions as Record<string, unknown>)[k]) ||
+          Number((body.dimensions as Record<string, unknown>)[k]) < 1 ||
+          Number((body.dimensions as Record<string, unknown>)[k]) > 300,
+      ))
+  )
+    return apiErrorResponse("VALIDATION_ERROR", "Dimensiones enteras de 1 a 300 cm", 400);
 
   if (!title) {
     return apiErrorResponse("VALIDATION_ERROR", "A title is required", 400);
   }
   if (!Number.isFinite(price) || price <= 0) {
-    return apiErrorResponse(
-      "VALIDATION_ERROR",
-      "A positive price is required",
-      400,
-    );
+    return apiErrorResponse("VALIDATION_ERROR", "A positive price is required", 400);
   }
   if (price > 500000) {
-    return apiErrorResponse(
-      "VALIDATION_ERROR",
-      "Price is above the allowed maximum",
-      400,
-    );
+    return apiErrorResponse("VALIDATION_ERROR", "Price is above the allowed maximum", 400);
   }
 
   try {
     const admin = getSupabaseAdmin();
 
     if (body.catalogVisible !== undefined || body.variants !== undefined) {
-      if (typeof body.catalogVisible !== "boolean") return apiErrorResponse("VALIDATION_ERROR", "Indica si el producto pertenece al catálogo", 400);
+      if (typeof body.catalogVisible !== "boolean")
+        return apiErrorResponse(
+          "VALIDATION_ERROR",
+          "Indica si el producto pertenece al catálogo",
+          400,
+        );
       let variants;
-      try { variants = validateVariants(body.variants ?? []); } catch (error) { return apiErrorResponse("VALIDATION_ERROR", error instanceof Error ? error.message : "Variantes inválidas", 400); }
-      if (!body.catalogVisible && variants.length) return apiErrorResponse("VALIDATION_ERROR", "Las variantes se seleccionan desde el catálogo", 400);
-      const { data, error } = await admin.rpc("publish_catalog_product", { p_seller_id: auth.value.id, p_public_id: generatePublicId(), p_variants: variants, p_product: { title, description: description || null, price: Math.round(price * 100) / 100, currency, images, stock, weight_kg: weightKg, package_dimensions: body.dimensions ?? null, delivery_options: deliveryOptions, catalog_visible: body.catalogVisible } });
-      if (error || !data) throw new DatabaseError("No se pudo publicar el producto y su inventario");
-      return NextResponse.json({ product: { id: data.product.id, title: data.product.title, price: Number(data.product.price), stock: data.product.stock }, link: { id: data.link.id, publicId: data.link.public_id, productId: data.product.id, active: true } }, { status: 201 });
+      try {
+        variants = validateVariants(body.variants ?? []);
+      } catch (error) {
+        return apiErrorResponse(
+          "VALIDATION_ERROR",
+          error instanceof Error ? error.message : "Variantes inválidas",
+          400,
+        );
+      }
+      if (!body.catalogVisible && variants.length)
+        return apiErrorResponse(
+          "VALIDATION_ERROR",
+          "Las variantes se seleccionan desde el catálogo",
+          400,
+        );
+      const { data, error } = await admin.rpc("publish_catalog_product", {
+        p_seller_id: auth.value.id,
+        p_public_id: generatePublicId(),
+        p_variants: variants,
+        p_product: {
+          title,
+          description: description || null,
+          price: Math.round(price * 100) / 100,
+          currency,
+          images,
+          stock,
+          weight_kg: weightKg,
+          package_dimensions: body.dimensions ?? null,
+          delivery_options: deliveryOptions,
+          catalog_visible: body.catalogVisible,
+        },
+      });
+      if (error || !data)
+        throw new DatabaseError("No se pudo publicar el producto y su inventario");
+      return NextResponse.json(
+        {
+          product: {
+            id: data.product.id,
+            title: data.product.title,
+            price: Number(data.product.price),
+            stock: data.product.stock,
+          },
+          link: {
+            id: data.link.id,
+            publicId: data.link.public_id,
+            productId: data.product.id,
+            active: true,
+          },
+        },
+        { status: 201 },
+      );
     }
 
     const { data: product, error: productError } = await admin
@@ -212,9 +243,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (productError || !product) {
-      throw new DatabaseError(
-        `Could not create product: ${productError?.message}`,
-      );
+      throw new DatabaseError(`Could not create product: ${productError?.message}`);
     }
 
     // UNIQUE(public_id) in the schema: a collision is a DB error, and we retry
@@ -240,9 +269,7 @@ export async function POST(req: NextRequest) {
       }
       // 23505 = unique_violation. Anything else is a real failure.
       if (!result.error.message.includes("23505")) {
-        throw new DatabaseError(
-          `Could not create purchase link: ${result.error.message}`,
-        );
+        throw new DatabaseError(`Could not create purchase link: ${result.error.message}`);
       }
       publicId = generatePublicId();
     }
@@ -271,12 +298,7 @@ export async function POST(req: NextRequest) {
       { status: 201 },
     );
   } catch (error) {
-    return apiErrorResponse(
-      "INTERNAL_ERROR",
-      "Could not publish the product",
-      500,
-      error,
-    );
+    return apiErrorResponse("INTERNAL_ERROR", "Could not publish the product", 500, error);
   }
 }
 
@@ -302,12 +324,57 @@ export async function PATCH(req: NextRequest) {
     weightKg?: unknown;
     dimensions?: unknown;
     shippingPayer?: unknown;
+    details?: unknown;
+    expectedUpdatedAt?: unknown;
   };
 
+  if (body.details !== undefined) {
+    let details;
+    try {
+      details = validateProductDetails(body.details);
+    } catch (e) {
+      return apiErrorResponse(
+        "VALIDATION_ERROR",
+        e instanceof Error ? e.message : "Datos inválidos",
+        400,
+      );
+    }
+    if (
+      typeof body.productId !== "string" ||
+      !/^[0-9a-f-]{36}$/i.test(body.productId) ||
+      typeof body.expectedUpdatedAt !== "string" ||
+      !Number.isFinite(Date.parse(body.expectedUpdatedAt))
+    )
+      return apiErrorResponse("VALIDATION_ERROR", "Recarga el producto antes de editar", 400);
+    const { data, error } = await getSupabaseAdmin().rpc("edit_catalog_details", {
+      p_seller_id: auth.value.id,
+      p_product_id: body.productId,
+      p_expected_updated_at: body.expectedUpdatedAt,
+      p_details: details,
+    });
+    if (error)
+      return apiErrorResponse(
+        "CONFLICT",
+        "No se guardó: el producto u opción pudo cambiar. Recarga antes de volver a editar.",
+        409,
+        error,
+      );
+    if (!data) return apiErrorResponse("NOT_FOUND", "Producto no encontrado", 404);
+    return NextResponse.json({ ok: true });
+  }
+
   if (body.catalogVisible !== undefined) {
-    if (typeof body.catalogVisible !== "boolean" || typeof body.productId !== "string") return apiErrorResponse("VALIDATION_ERROR", "Producto inválido", 400);
-    const { data, error } = await getSupabaseAdmin().from("products").update({ catalog_visible: body.catalogVisible }).eq("id", body.productId).eq("seller_id", auth.value.id).select("id").maybeSingle();
-    if (error) return apiErrorResponse("INTERNAL_ERROR", "No se pudo actualizar el catálogo", 500, error);
+    if (typeof body.catalogVisible !== "boolean" || typeof body.productId !== "string")
+      return apiErrorResponse("VALIDATION_ERROR", "Producto inválido", 400);
+    const { data, error } = await getSupabaseAdmin()
+      .from("products")
+      .update({ catalog_visible: body.catalogVisible })
+      .eq("id", body.productId)
+      .eq("seller_id", auth.value.id)
+      .select("id")
+      .maybeSingle();
+    if (error)
+      return apiErrorResponse("INTERNAL_ERROR", "No se pudo actualizar el catálogo", 500, error);
     if (!data) return apiErrorResponse("NOT_FOUND", "Producto no encontrado", 404);
     return NextResponse.json({ ok: true });
   }
@@ -321,71 +388,45 @@ export async function PATCH(req: NextRequest) {
         typeof body.dimensions !== "object" ||
         ["length", "width", "height"].some(
           (k) =>
-            !Number.isInteger(
-              (body.dimensions as Record<string, unknown>)[k],
-            ) ||
+            !Number.isInteger((body.dimensions as Record<string, unknown>)[k]) ||
             Number((body.dimensions as Record<string, unknown>)[k]) <= 0 ||
             Number((body.dimensions as Record<string, unknown>)[k]) > 300,
         ))
     )
-      return apiErrorResponse(
-        "VALIDATION_ERROR",
-        "Dimensiones enteras de 1 a 300 cm",
-        400,
-      );
+      return apiErrorResponse("VALIDATION_ERROR", "Dimensiones enteras de 1 a 300 cm", 400);
     if (
       body.shippingPayer !== undefined &&
       !["buyer", "seller"].includes(String(body.shippingPayer))
     )
-      return apiErrorResponse(
-        "VALIDATION_ERROR",
-        "Indica quién paga el envío",
-        400,
-      );
+      return apiErrorResponse("VALIDATION_ERROR", "Indica quién paga el envío", 400);
     if (
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        productId,
-      ) ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId) ||
       !Number.isFinite(weightKg) ||
       weightKg <= 0 ||
       weightKg > 1000 ||
       body.linkId !== undefined
     ) {
-      return apiErrorResponse(
-        "VALIDATION_ERROR",
-        "Indica el producto y un peso válido en kg",
-        400,
-      );
+      return apiErrorResponse("VALIDATION_ERROR", "Indica el producto y un peso válido en kg", 400);
     }
     try {
       const { data, error } = await getSupabaseAdmin()
         .from("products")
         .update({
           weight_kg: weightKg,
-          ...(body.dimensions !== undefined
-            ? { package_dimensions: body.dimensions }
-            : {}),
-          ...(body.shippingPayer !== undefined
-            ? { shipping_payer: body.shippingPayer }
-            : {}),
+          ...(body.dimensions !== undefined ? { package_dimensions: body.dimensions } : {}),
+          ...(body.shippingPayer !== undefined ? { shipping_payer: body.shippingPayer } : {}),
         })
         .eq("id", productId)
         .eq("seller_id", auth.value.id)
         .select("id, weight_kg")
         .maybeSingle();
       if (error) throw new DatabaseError("Could not save package weight");
-      if (!data)
-        return apiErrorResponse("NOT_FOUND", "Producto no encontrado", 404);
+      if (!data) return apiErrorResponse("NOT_FOUND", "Producto no encontrado", 404);
       return NextResponse.json({
         product: { id: data.id, weightKg: Number(data.weight_kg) },
       });
     } catch (error) {
-      return apiErrorResponse(
-        "INTERNAL_ERROR",
-        "Could not save package weight",
-        500,
-        error,
-      );
+      return apiErrorResponse("INTERNAL_ERROR", "Could not save package weight", 500, error);
     }
   }
 
@@ -423,11 +464,6 @@ export async function PATCH(req: NextRequest) {
       },
     });
   } catch (error) {
-    return apiErrorResponse(
-      "INTERNAL_ERROR",
-      "Could not update the link",
-      500,
-      error,
-    );
+    return apiErrorResponse("INTERNAL_ERROR", "Could not update the link", 500, error);
   }
 }

@@ -1,10 +1,16 @@
-import { ShippingProvider, RateInput, CreateShipmentInput, ShipmentResult, TrackingResult } from "./types";
+import {
+  ShippingProvider,
+  RateInput,
+  CreateShipmentInput,
+  ShipmentResult,
+  TrackingResult,
+} from "./types";
 import { ShippingRate, ShipmentStatus } from "@/domain/types";
 
 /**
  * DHL Express Shipping Provider
  * Documentation Reference: DHL Express MyDHL API v3.0 REST (https://developer.dhl.com/)
- * 
+ *
  * Required Environment Variables for Live API:
  * - DHL_API_KEY
  * - DHL_API_SECRET
@@ -37,14 +43,14 @@ export class DHLShippingProvider implements ShippingProvider {
 
   private mapDHLStatusToRouteFlow(dhlStatus: string): ShipmentStatus {
     const statusMap: Record<string, ShipmentStatus> = {
-      "pending": "LABEL_CREATED",
-      "labelCreated": "LABEL_CREATED",
-      "pickedUp": "PICKED_UP",
-      "inTransit": "IN_TRANSIT",
-      "outForDelivery": "OUT_FOR_DELIVERY",
-      "delivered": "DELIVERED",
-      "failed": "FAILED",
-      "cancelled": "CANCELLED",
+      pending: "LABEL_CREATED",
+      labelCreated: "LABEL_CREATED",
+      pickedUp: "PICKED_UP",
+      inTransit: "IN_TRANSIT",
+      outForDelivery: "OUT_FOR_DELIVERY",
+      delivered: "DELIVERED",
+      failed: "FAILED",
+      cancelled: "CANCELLED",
     };
     return statusMap[dhlStatus] || "LABEL_CREATED";
   }
@@ -93,11 +99,12 @@ export class DHLShippingProvider implements ShippingProvider {
       return (data.products || []).map((p: Record<string, unknown>) => ({
         provider: "DHL" as const,
         carrierName: "DHL Express",
-        serviceName: p.productName as string || "DHL Express",
+        serviceName: (p.productName as string) || "DHL Express",
         serviceCode: p.productCode as string,
         rate: (p.totalPrice as Array<{ price?: number }>)?.[0]?.price || 0,
         currency: (p.totalPrice as Array<{ currencyType?: string }>)?.[0]?.currencyType || "MXN",
-        estimatedDays: ((p.deliveryCapabilities as Record<string, string>)?.deliveryTime) || "1-2 business days",
+        estimatedDays:
+          (p.deliveryCapabilities as Record<string, string>)?.deliveryTime || "1-2 business days",
       }));
     } catch (err) {
       console.error("DHL API rates request failed:", err);
@@ -199,7 +206,7 @@ export class DHLShippingProvider implements ShippingProvider {
       }
 
       const data = await res.json();
-      
+
       const trackingNumber = data.shipmentTrackingNumber || data.trackingNumber || "";
       const labelData = data.documents?.[0]?.content || data.labelUrl || "";
       const labelUrl = labelData.startsWith("http") ? labelData : undefined;
@@ -212,7 +219,9 @@ export class DHLShippingProvider implements ShippingProvider {
         trackingUrl: `https://www.dhl.com/mx-es/home/tracking/tracking-express.html?submit=1&tracking-id=${trackingNumber}`,
         labelUrl,
         status: this.mapDHLStatusToRouteFlow(data.status || "labelCreated"),
-        estimatedDelivery: data.estimatedDeliveryDate || new Date(Date.now() + 48 * 3600 * 1000).toISOString().split("T")[0],
+        estimatedDelivery:
+          data.estimatedDeliveryDate ||
+          new Date(Date.now() + 48 * 3600 * 1000).toISOString().split("T")[0],
       };
     } catch (err) {
       console.error("DHL API shipment creation failed:", err);
@@ -249,21 +258,21 @@ export class DHLShippingProvider implements ShippingProvider {
         const locationObj = e.location as Record<string, unknown> | undefined;
         const addressObj = locationObj?.address as Record<string, unknown> | undefined;
         const serviceAreaObj = e.serviceArea as Record<string, unknown> | undefined;
-        
+
         return {
-          status: this.mapDHLStatusToRouteFlow(e.statusCode as string || "pending"),
-          description: e.description as string || "Unknown event",
-          location: addressObj?.locality as string || serviceAreaObj?.description as string,
-          timestamp: e.timestamp as string || new Date().toISOString(),
+          status: this.mapDHLStatusToRouteFlow((e.statusCode as string) || "pending"),
+          description: (e.description as string) || "Unknown event",
+          location: (addressObj?.locality as string) || (serviceAreaObj?.description as string),
+          timestamp: (e.timestamp as string) || new Date().toISOString(),
         };
       });
 
       return {
         trackingNumber,
         provider: "DHL",
-        status: this.mapDHLStatusToRouteFlow(shipment.status?.statusCode as string || "pending"),
+        status: this.mapDHLStatusToRouteFlow((shipment.status?.statusCode as string) || "pending"),
         carrier: "DHL Express",
-        service: shipment.service?.description as string || "Express",
+        service: (shipment.service?.description as string) || "Express",
         estimatedDelivery: shipment.estimatedTimeOfDelivery as string,
         events,
       };

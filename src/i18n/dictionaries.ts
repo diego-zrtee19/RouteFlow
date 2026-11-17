@@ -18,7 +18,7 @@ export function getDictionary(locale: Locale): Dictionary {
 export function interpolate(template: string, vars?: TranslationVars): string {
   if (!vars) return template;
   return template.replace(/\{(\w+)\}/g, (match, key: string) =>
-    Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key]) : match
+    Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key]) : match,
   );
 }
 

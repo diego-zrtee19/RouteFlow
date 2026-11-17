@@ -140,8 +140,8 @@ describe("a product created without a stock level is still buyable", () => {
 
   it("matches the database default so the two layers cannot disagree", () => {
     const schema = readFileSync(
-      join(process.cwd(), "supabase_schema_v4_stock.sql"),
-      "utf8"
+      join(process.cwd(), "supabase/schemas/supabase_schema_v4_stock.sql"),
+      "utf8",
     );
     // The migration sets the column default to the same number the application
     // uses. If one drifts, a product created directly in the DB and one created
@@ -167,28 +167,26 @@ describe("seller PII is not exposed to the public anon key", () => {
   const readSchema = (name: string) => readFileSync(join(process.cwd(), name), "utf8");
 
   it("schema V3 grants no public SELECT on sellers", () => {
-    const schema = readSchema("supabase_schema_v3.sql");
-    expect(schema).not.toMatch(
-      /CREATE\s+POLICY[^;]*ON\s+sellers[^;]*FOR\s+SELECT/i
-    );
+    const schema = readSchema("supabase/schemas/supabase_schema_v3.sql");
+    expect(schema).not.toMatch(/CREATE\s+POLICY[^;]*ON\s+sellers[^;]*FOR\s+SELECT/i);
   });
 
   it("the V5 migration revokes it for databases already provisioned", () => {
-    const migration = readSchema("supabase_schema_v5_sellers_pii.sql");
+    const migration = readSchema("supabase/schemas/supabase_schema_v5_sellers_pii.sql");
     expect(migration).toMatch(
-      /DROP\s+POLICY\s+IF\s+EXISTS\s+"public read sellers"\s+ON\s+sellers/i
+      /DROP\s+POLICY\s+IF\s+EXISTS\s+"public read sellers"\s+ON\s+sellers/i,
     );
   });
 
   it("keeps RLS enabled on sellers", () => {
-    expect(readSchema("supabase_schema_v3.sql")).toMatch(
-      /ALTER\s+TABLE\s+sellers\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY/i
+    expect(readSchema("supabase/schemas/supabase_schema_v3.sql")).toMatch(
+      /ALTER\s+TABLE\s+sellers\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY/i,
     );
   });
 
   it("still denies the order and payment tables publicly", () => {
     // The fix for `sellers` must not have relaxed anything else.
-    const schema = readSchema("supabase_schema_v3.sql");
+    const schema = readSchema("supabase/schemas/supabase_schema_v3.sql");
     for (const table of ["orders", "order_items", "payments", "disputes"]) {
       expect(schema).toMatch(new RegExp(`"deny anon ${table}"`, "i"));
     }
@@ -209,4 +207,3 @@ describe("seller PII is not exposed to the public anon key", () => {
     expect(offenders).toEqual([]);
   });
 });
-

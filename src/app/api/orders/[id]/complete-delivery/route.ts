@@ -13,5 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
   try {
     return NextResponse.json(await completeCoordinatedDelivery(id, seller.value.id, body.pin));
-  } catch (error) { return toErrorResponse(error); }
+  } catch (error) {
+    return toErrorResponse(error);
+  }
 }

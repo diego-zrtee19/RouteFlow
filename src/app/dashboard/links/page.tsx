@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonStyles } from "@/components/ui/Button";
 import { Copy, Check, ExternalLink } from "lucide-react";
 import { SharePurchaseLink } from "@/components/shared/SharePurchaseLink";
 import { useI18n } from "@/i18n/LanguageProvider";
@@ -39,8 +39,18 @@ export default function LinksPage() {
     try {
       const res = await fetch("/api/dashboard/catalog", { cache: "no-store" });
       if (!res.ok) throw new Error("catalog_unavailable");
-      const data = (await res.json()) as { links?: CatalogLink[] };
-      setLinks(data.links ?? []);
+      const data = (await res.json()) as {
+        links?: CatalogLink[];
+        products?: NonNullable<CatalogLink["product"]>[];
+      };
+      // The API returns products and links separately; join by identity, never by position.
+      const products = new Map((data.products ?? []).map((product) => [product.id, product]));
+      setLinks(
+        (data.links ?? []).map((link) => ({
+          ...link,
+          product: products.get(link.productId) ?? null,
+        })),
+      );
       setError(null);
     } catch {
       setError(t("dashboard.links.loadError"));
@@ -53,10 +63,15 @@ export default function LinksPage() {
   }, [load]);
 
   // One canonical URL per link, shared by the visible field, Copy and Preview.
-  const origin = getConfiguredAppOrigin();
+  const [origin, setOrigin] = useState(getConfiguredAppOrigin);
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development" || !getConfiguredAppOrigin()) {
+      setOrigin(window.location.origin);
+    }
+  }, []);
   const urlFor = useCallback(
     (publicId: string) => buildPublicLinkUrl(publicId, origin || undefined),
-    [origin]
+    [origin],
   );
 
   const handleCopy = async (publicId: string) => {
@@ -88,21 +103,26 @@ export default function LinksPage() {
 
   const displayUrl = useMemo(
     () => (publicId: string) => urlFor(publicId).replace(/^https?:\/\//, ""),
-    [urlFor]
+    [urlFor],
   );
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-extrabold text-[#0B1220]">{t("dashboard.links.title")}</h1>
-            <p className="text-sm text-slate-500">
-              {t("dashboard.links.subtitle")}
+            <h1 className="text-3xl font-semibold tracking-tight text-ink">
+              Comparte tus productos
+            </h1>
+            <p className="mt-2 text-sm text-slate-500">
+              Elige un producto y envía su enlace al comprador.
             </p>
           </div>
-          <Link href="/dashboard/products/new">
-            <Button size="md">{t("dashboard.links.new")}</Button>
+          <Link
+            href="/dashboard/products/new?mode=quick"
+            className={buttonStyles({ variant: "secondary" })}
+          >
+            Nueva venta
           </Link>
         </div>
 
@@ -120,24 +140,28 @@ export default function LinksPage() {
             // Each link resolves its OWN product, so Link A can never show Product B.
             const product = link.product;
             return (
-              <Card key={link.id} className="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <Card key={link.id} className="p-6 space-y-5">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
+                  <div className="w-20 h-20 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
                     {product?.images?.[0] ? (
                       <Image
                         src={product.images[0]}
                         alt=""
-                        width={56}
-                        height={56}
+                        width={80}
+                        height={80}
                         className="w-full h-full object-cover"
                       />
                     ) : null}
                   </div>
                   <div>
-                    <h3 className="font-bold text-base text-[#0B1220]">{product?.title}</h3>
+                    <h3 className="font-semibold text-base text-ink">
+                      {product?.title ?? "Producto no disponible"}
+                    </h3>
                     <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
                       <span className="font-semibold text-slate-900">
-                        ${product?.price} {product?.currency}
+                        {product
+                          ? `$${product.price} ${product.currency}`
+                          : "Producto no disponible"}
                       </span>
                       <span>·</span>
                       <span>{t("dashboard.links.views", { count: link.views })}</span>
@@ -146,7 +170,7 @@ export default function LinksPage() {
                         className={
                           link.active
                             ? "text-emerald-600 font-medium"
-                            : "text-slate-400 font-medium"
+                            : "text-slate-500 font-medium"
                         }
                       >
                         {link.active ? t("common.active") : t("common.inactive")}
@@ -155,38 +179,50 @@ export default function LinksPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-mono text-slate-700 select-all">
-                    {displayUrl(link.publicId)}
-                  </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleCopy(link.publicId)}
-                  >
-                    {copiedId === link.publicId ? (
-                      <Check className="w-3.5 h-3.5 text-emerald-600 mr-1" />
-                    ) : (
-                      <Copy className="w-3.5 h-3.5 mr-1" />
-                    )}
-                    {copiedId === link.publicId ? t("common.copied") : t("common.copy")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pendingId === link.id}
-                    onClick={() => handleToggle(link)}
-                  >
-                    {link.active ? t("dashboard.links.deactivate") : t("dashboard.links.activate")}
-                  </Button>
-                  {/* Preview opens the exact same public URL the buyer receives. */}
-                  <Link href={`/p/${link.publicId}`} target="_blank" rel="noopener">
-                    <Button variant="outline" size="sm" aria-label={t("dashboard.links.preview")}>
-                      <ExternalLink className="w-3.5 h-3.5" />
+                {link.active && product && (
+                  <SharePurchaseLink
+                    publicId={link.publicId}
+                    title={product?.title ?? "Mi producto"}
+                  />
+                )}
+                <details className="border-t border-line pt-2">
+                  <summary className="min-h-11 cursor-pointer py-3 text-sm text-slate-600">
+                    Ver enlace y más opciones
+                  </summary>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-mono text-slate-700 select-all">
+                      {displayUrl(link.publicId)}
+                    </div>
+                    <Button variant="secondary" size="sm" onClick={() => handleCopy(link.publicId)}>
+                      {copiedId === link.publicId ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600 mr-1" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5 mr-1" />
+                      )}
+                      {copiedId === link.publicId ? t("common.copied") : t("common.copy")}
                     </Button>
-                  </Link>
-                </div>
-                {link.active && <SharePurchaseLink publicId={link.publicId} />}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={pendingId === link.id}
+                      onClick={() => handleToggle(link)}
+                    >
+                      {link.active
+                        ? t("dashboard.links.deactivate")
+                        : t("dashboard.links.activate")}
+                    </Button>
+                    {/* Preview opens the exact same public URL the buyer receives. */}
+                    <Link
+                      href={`/p/${link.publicId}`}
+                      target="_blank"
+                      rel="noopener"
+                      className={buttonStyles({ variant: "outline", size: "sm" })}
+                      aria-label={t("dashboard.links.preview")}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </details>
               </Card>
             );
           })}
@@ -194,7 +230,7 @@ export default function LinksPage() {
 
         {links !== null && links.length === 0 ? (
           <Card className="p-10 text-center space-y-2">
-            <p className="text-sm font-bold text-[#0B1220]">{t("dashboard.links.emptyTitle")}</p>
+            <p className="text-sm font-bold text-ink">{t("dashboard.links.emptyTitle")}</p>
             <p className="text-xs text-slate-500">{t("dashboard.links.emptyBody")}</p>
           </Card>
         ) : null}

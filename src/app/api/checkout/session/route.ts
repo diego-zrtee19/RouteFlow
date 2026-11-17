@@ -1,3 +1,4 @@
+import { guardPublicRequest, readPublicJson, publicRequestError } from "@/lib/publicRequestGuard";
 import { NextRequest, NextResponse } from "next/server";
 import { AppError } from "@/lib/errors";
 import {
@@ -36,34 +37,37 @@ export async function GET() {
  */
 export async function POST(req: NextRequest) {
   try {
-    const payload = await req.json().catch(() => ({}));
+    await guardPublicRequest(req, "checkout");
+    const payload = await readPublicJson(req);
     const input = validateCheckoutInput(payload);
     const origin = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
 
     // Reads the link and product from Supabase and writes the order,
     // order_item and pending payment rows. No in-memory store is involved, so
     // a cold start or a redeploy cannot lose a created order.
-    const result = await createCheckoutSession(input, origin);
+    const result = await createCheckoutSession(input, origin, req.headers.get("Idempotency-Key"));
 
-    return NextResponse.json({
-      orderId: result.order.id,
-      orderNumber: result.order.orderNumber,
-      sessionId: result.sessionId,
-      url: result.url,
-      buyerToken: result.buyerToken,
-      testMode: result.testMode,
-    });
+    return NextResponse.json(
+      {
+        orderId: result.order.id,
+        orderNumber: result.order.orderNumber,
+        sessionId: result.sessionId,
+        url: result.url,
+        buyerToken: result.buyerToken,
+        testMode: result.testMode,
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
+    const guarded = publicRequestError(error);
+    if (guarded) return guarded;
     if (error instanceof AppError)
       return NextResponse.json(
         { error: error.code, code: error.code, message: error.message },
         { status: error.status },
       );
     if (error instanceof CheckoutError) {
-      return NextResponse.json(
-        { error: error.code, code: error.code },
-        { status: error.status },
-      );
+      return NextResponse.json({ error: error.code, code: error.code }, { status: error.status });
     }
     if (error instanceof StripeNotConfiguredError) {
       return NextResponse.json(

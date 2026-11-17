@@ -42,7 +42,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
    * NotConfiguredError. Callers may still pass any ALLOWED_PROVIDERS entry.
    */
   const DEFAULT_PROVIDER = "FEDEX";
-  const provider = (typeof body.provider === "string" ? body.provider : DEFAULT_PROVIDER).toUpperCase();
+  const provider = (
+    typeof body.provider === "string" ? body.provider : DEFAULT_PROVIDER
+  ).toUpperCase();
   const serviceCode =
     typeof body.serviceCode === "string" ? body.serviceCode : `${provider}_EXPRESS`;
 
@@ -57,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return apiErrorResponse(
       "VALIDATION_ERROR",
       "The mock carrier is not enabled for this environment",
-      400
+      400,
     );
   }
 

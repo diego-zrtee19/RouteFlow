@@ -1,10 +1,16 @@
-import { ShippingProvider, RateInput, CreateShipmentInput, ShipmentResult, TrackingResult } from "./types";
+import {
+  ShippingProvider,
+  RateInput,
+  CreateShipmentInput,
+  ShipmentResult,
+  TrackingResult,
+} from "./types";
 import { ShippingRate } from "@/domain/types";
 
 /**
  * Uber Direct Delivery Provider
  * Documentation Reference: Uber Direct REST API (https://developer.uber.com/docs/deliveries)
- * 
+ *
  * Required Environment Variables for Live API:
  * - UBER_CUSTOMER_ID
  * - UBER_CLIENT_ID

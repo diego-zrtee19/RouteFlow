@@ -87,10 +87,7 @@ export function authorizeTrackingRead(order: Order, caller: TrackingCaller): Tra
  * Seller-only by design. A buyer token is deliberately insufficient: refreshing
  * is a privileged, mutating, billable operation.
  */
-export function authorizeTrackingRefresh(
-  order: Order,
-  caller: TrackingCaller
-): TrackingAccess {
+export function authorizeTrackingRefresh(order: Order, caller: TrackingCaller): TrackingAccess {
   if (!caller.authenticated || !caller.seller) {
     return {
       ok: false,
@@ -116,7 +113,7 @@ export function authorizeTrackingRefresh(
 /** True when the shipment may be returned to this actor. */
 export function canSeeShipment(
   access: TrackingAccess,
-  shipment: Shipment | null
+  shipment: Shipment | null,
 ): shipment is Shipment {
   return access.ok && shipment !== null;
 }

@@ -1,3 +1,10 @@
+import {
+  loadCheckoutAttempt,
+  reserveCheckoutAttempt,
+  bindStripeRequest,
+  assertCheckoutResumable,
+} from "@/services/checkoutAttemptService";
+import type { CreateOrderResult } from "@/repositories/orderRepository";
 import Stripe from "stripe";
 import { validateShippingQuote } from "@/services/shippingQuoteService";
 import { requestRefund } from "@/services/refundService";
@@ -8,10 +15,7 @@ import {
   findOrderByIdForWebhook,
   cancelOrder,
 } from "@/repositories/orderRepository";
-import {
-  findOrderIdByCheckoutSession,
-  upsertPayment,
-} from "@/repositories/paymentRepository";
+import { findOrderIdByCheckoutSession, upsertPayment } from "@/repositories/paymentRepository";
 import { recordEvent } from "@/services/orderService";
 import type { DeliveryMethod } from "@/domain/types";
 import type { Order } from "@/domain/types";
@@ -82,20 +86,16 @@ export function validateCheckoutInput(payload: unknown): CheckoutInput {
   )
     throw new CheckoutError("invalid_shipping_quote", 400);
   if (!buyerName) throw new CheckoutError("missing_buyer_name", 400);
-  if (!EMAIL_RE.test(buyerEmail))
-    throw new CheckoutError("invalid_buyer_email", 400);
+  if (!EMAIL_RE.test(buyerEmail)) throw new CheckoutError("invalid_buyer_email", 400);
   if (!buyerPhone) throw new CheckoutError("missing_buyer_phone", 400);
-  if (!street || !city || !postalCode)
-    throw new CheckoutError("missing_shipping_address", 400);
+  if (!street || !city || !postalCode) throw new CheckoutError("missing_shipping_address", 400);
   if (!["shipping", "local_delivery", "meetup"].includes(deliveryMethod)) {
     throw new CheckoutError("invalid_delivery_method", 400);
   }
 
   return {
     publicId: publicId.toUpperCase(),
-    ...(requiredString(body.quoteId)
-      ? { quoteId: requiredString(body.quoteId) }
-      : {}),
+    ...(requiredString(body.quoteId) ? { quoteId: requiredString(body.quoteId) } : {}),
     buyerName,
     buyerEmail,
     buyerPhone,
@@ -135,8 +135,7 @@ async function resolveLink(publicId: string) {
   if (product.stock <= 0) throw new CheckoutError("product_out_of_stock", 409);
 
   const price = Number(product.price);
-  if (!Number.isFinite(price) || price <= 0)
-    throw new CheckoutError("invalid_price", 409);
+  if (!Number.isFinite(price) || price <= 0) throw new CheckoutError("invalid_price", 409);
 
   return resolved;
 }
@@ -152,23 +151,17 @@ export interface ReconcileResult {
   reason: string;
 }
 
-function extractPaymentIntentId(
-  session: Stripe.Checkout.Session,
-): string | undefined {
+function extractPaymentIntentId(session: Stripe.Checkout.Session): string | undefined {
   return typeof session.payment_intent === "string"
     ? session.payment_intent
     : session.payment_intent?.id;
 }
 
 /** Defence in depth: never mark an order paid for an amount the server did not calculate. */
-export function orderMatchesSessionAmount(
-  order: Order,
-  session: Stripe.Checkout.Session,
-): boolean {
+export function orderMatchesSessionAmount(order: Order, session: Stripe.Checkout.Session): boolean {
   if (session.amount_total == null) return true;
   const sameCurrency =
-    (session.currency || order.currency).toLowerCase() ===
-    order.currency.toLowerCase();
+    (session.currency || order.currency).toLowerCase() === order.currency.toLowerCase();
   return sameCurrency && toStripeAmount(order.amount) === session.amount_total;
 }
 
@@ -201,16 +194,13 @@ export async function reconcileCheckoutSession(
 
   const paymentIntentId = extractPaymentIntentId(session) ?? null;
 
-  // Record the session/intent binding before anything else, so a later
-  // reconciliation (or a support investigation) can follow the money.
-  await upsertPayment({
-    orderId: order.id,
-    checkoutSessionId: session.id,
-    paymentIntentId,
-    amount: order.amount,
-    currency: order.currency,
-    status: order.paymentStatus === "SUCCEEDED" ? "SUCCEEDED" : "PENDING",
-  });
+  // Old Checkout sessions must never revive closed orders or rewrite refunds.
+  if (
+    ["CANCELLED", "REFUNDED", "COMPLETED", "DISPUTED"].includes(order.status) ||
+    order.paymentStatus === "REFUNDED"
+  ) {
+    return { order, changed: false, reason: "order_closed" };
+  }
 
   if (session.payment_status === "paid") {
     if (!orderMatchesSessionAmount(order, session)) {
@@ -225,23 +215,32 @@ export async function reconcileCheckoutSession(
       return { order, changed: false, reason: "amount_mismatch" };
     }
 
-    const amountPaid =
-      session.amount_total != null ? session.amount_total / 100 : order.amount;
+    const amountPaid = session.amount_total != null ? session.amount_total / 100 : order.amount;
     const currency = String(session.currency ?? order.currency).toUpperCase();
 
     if (order.paymentStatus === "SUCCEEDED") {
       return { order, changed: false, reason: "already_paid" };
     }
 
-    const { data: completion, error: completionError } =
-      await getSupabaseAdmin().rpc("complete_payment_and_mark_order_paid", {
+    const { data: completion, error: completionError } = await getSupabaseAdmin().rpc(
+      "complete_payment_and_mark_order_paid",
+      {
         p_order_id: order.id,
         p_checkout_session_id: session.id,
         p_payment_intent_id: paymentIntentId,
         p_amount_paid: amountPaid,
         p_currency: currency,
         p_payer_id: null,
-      });
+      },
+    );
+    if (
+      !completionError &&
+      !completion?.success &&
+      ["ORDER_CANCELLED", "INVALID_ORDER_STATE"].includes(completion?.error)
+    ) {
+      const current = await findOrderByIdForWebhook(order.id);
+      return { order: current ?? order, changed: false, reason: "order_closed" };
+    }
     if (completionError || !completion?.success)
       throw new CheckoutError("payment_reconciliation_failed", 503);
     const paidOrder = await findOrderByIdForWebhook(order.id);
@@ -273,8 +272,7 @@ export async function reconcileCheckoutSession(
  * The truth always comes from the Stripe API, never from the browser.
  */
 export async function verifyCheckoutSessionById(sessionId: string) {
-  if (!isStripeConfigured())
-    throw new CheckoutError("stripe_not_configured", 503);
+  if (!isStripeConfigured()) throw new CheckoutError("stripe_not_configured", 503);
   const session = await getStripe().checkout.sessions.retrieve(sessionId);
   const result = await reconcileCheckoutSession(session);
   return {
@@ -320,38 +318,74 @@ export interface CreatedCheckout {
 export async function createCheckoutSession(
   input: CheckoutInput,
   appOrigin?: string,
+  attemptKey?: string | null,
 ): Promise<CreatedCheckout> {
-  if (!isStripeConfigured())
-    throw new CheckoutError("stripe_not_configured", 503);
+  if (!isStripeConfigured()) throw new CheckoutError("stripe_not_configured", 503);
 
-  const { product, seller, link } = await resolveLink(input.publicId);
-  if (!product.deliveryOptions.includes(input.deliveryMethod)) {
-    throw new CheckoutError("delivery_method_not_available", 400);
+  const attempt =
+    attemptKey !== undefined ? await loadCheckoutAttempt(attemptKey, input, "quick") : null;
+  let created: CreateOrderResult | null;
+  if (attempt?.order) {
+    const prior = attempt.order;
+    assertCheckoutResumable(prior);
+    if (prior.paymentStatus === "SUCCEEDED")
+      return {
+        order: prior,
+        buyerToken: attempt.buyerToken,
+        sessionId: "",
+        url: `${resolveAppOrigin(appOrigin)}/order/${prior.id}`,
+        testMode: isStripeTestMode(),
+      };
+    created = {
+      order: prior,
+      buyerToken: attempt.buyerToken,
+      productTitle: prior.items[0].title,
+      unitPrice: prior.items[0].unitPrice,
+      currency: prior.currency,
+    };
+  } else {
+    const { product } = await resolveLink(input.publicId);
+    if (!product.deliveryOptions.includes(input.deliveryMethod)) {
+      throw new CheckoutError("delivery_method_not_available", 400);
+    }
+    await validateShippingQuote(input, product.id);
+
+    // Every money and ownership field is re-derived inside the repository from
+    // the stored product. The caller cannot influence price, fee, seller or stock.
+    const reservationInput = {
+      publicId: input.publicId,
+      buyerName: input.buyerName,
+      buyerEmail: input.buyerEmail,
+      buyerPhone: input.buyerPhone,
+      shippingAddress: {
+        fullName: input.buyerName,
+        phone: input.buyerPhone,
+        street: input.address.street,
+        city: input.address.city,
+        state: input.address.state || input.address.city,
+        postalCode: input.address.postalCode,
+        country: input.address.country || "Mexico",
+        notes: input.address.notes,
+      },
+      deliveryMethod: input.deliveryMethod,
+      quoteId: input.quoteId,
+    };
+    if (attempt) {
+      const reserved = await reserveCheckoutAttempt(attempt, {
+        ...input,
+        address: reservationInput.shippingAddress,
+      });
+      created = {
+        order: reserved,
+        buyerToken: attempt.buyerToken,
+        productTitle: reserved.items[0].title,
+        unitPrice: reserved.items[0].unitPrice,
+        currency: reserved.currency,
+      };
+    } else created = await createOrderFromPurchaseLink(reservationInput);
+
+    if (!created) throw new CheckoutError("link_not_found", 404);
   }
-  await validateShippingQuote(input, product.id);
-
-  // Every money and ownership field is re-derived inside the repository from
-  // the stored product. The caller cannot influence price, fee, seller or stock.
-  const created = await createOrderFromPurchaseLink({
-    publicId: input.publicId,
-    buyerName: input.buyerName,
-    buyerEmail: input.buyerEmail,
-    buyerPhone: input.buyerPhone,
-    shippingAddress: {
-      fullName: input.buyerName,
-      phone: input.buyerPhone,
-      street: input.address.street,
-      city: input.address.city,
-      state: input.address.state || input.address.city,
-      postalCode: input.address.postalCode,
-      country: input.address.country || "Mexico",
-      notes: input.address.notes,
-    },
-    deliveryMethod: input.deliveryMethod,
-    quoteId: input.quoteId,
-  });
-
-  if (!created) throw new CheckoutError("link_not_found", 404);
 
   const order = created.order;
   const productAmount = created.unitPrice;
@@ -363,8 +397,8 @@ export async function createCheckoutSession(
     order_id: order.id,
     order_number: order.orderNumber,
     public_id: input.publicId,
-    product_id: product.id,
-    seller_id: seller.id,
+    product_id: order.items[0].productId,
+    seller_id: order.sellerId,
     delivery_method: input.deliveryMethod,
     platform_fee: String(order.platformFee ?? computePlatformFee(amount)),
   };
@@ -372,58 +406,56 @@ export async function createCheckoutSession(
   // Amount is server-controlled: unit_amount comes from the stored product price.
   let session: Stripe.Checkout.Session;
   try {
-    session = await getStripe().checkout.sessions.create(
-      {
-        mode: "payment",
-        expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
-        payment_method_types: ["card"],
-        line_items: [
-          {
-            quantity: 1,
-            price_data: {
-              currency,
-              unit_amount: toStripeAmount(productAmount),
-              product_data: {
-                name: created.productTitle,
-                description: `RouteFlow ${order.orderNumber}`,
-                images: product.images?.slice(0, 1),
-              },
+    const request: Stripe.Checkout.SessionCreateParams = {
+      mode: "payment",
+      expires_at: Math.floor(Date.now() / 1000) + 31 * 60,
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency,
+            unit_amount: toStripeAmount(productAmount),
+            product_data: {
+              name: created.productTitle,
+              description: `RouteFlow ${order.orderNumber}`,
+              images: order.items[0].imageUrl ? [order.items[0].imageUrl] : undefined,
             },
           },
-          ...(shippingAmount > 0
-            ? [
-                {
-                  quantity: 1,
-                  price_data: {
-                    currency,
-                    unit_amount: toStripeAmount(shippingAmount),
-                    product_data: { name: "Envío FedEx" },
-                  },
-                },
-              ]
-            : []),
-        ],
-        customer_email: input.buyerEmail,
-        client_reference_id: order.id,
-        metadata,
-        payment_intent_data: {
-          capture_method: "automatic",
-          transfer_group: `rf_order_${order.id}`,
-          description: `RouteFlow ${order.orderNumber} · ${product.title}`,
-          metadata,
         },
-        success_url: `${origin}/checkout/success?order_id=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${origin}/checkout/${input.publicId}?payment=cancelled&order_id=${order.id}`,
+        ...(shippingAmount > 0
+          ? [
+              {
+                quantity: 1,
+                price_data: {
+                  currency,
+                  unit_amount: toStripeAmount(shippingAmount),
+                  product_data: { name: "Envío FedEx" },
+                },
+              },
+            ]
+          : []),
+      ],
+      customer_email: input.buyerEmail,
+      client_reference_id: order.id,
+      metadata,
+      payment_intent_data: {
+        capture_method: "automatic",
+        transfer_group: `rf_order_${order.id}`,
+        description: `RouteFlow ${order.orderNumber} · ${created.productTitle}`,
+        metadata,
       },
+      success_url: `${origin}/checkout/success?order_id=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/checkout/${input.publicId}?payment=cancelled&order_id=${order.id}`,
+    };
+    session = await getStripe().checkout.sessions.create(
+      attempt ? await bindStripeRequest(attempt, request) : request,
       { idempotencyKey: `rf_checkout_${order.id}` },
     );
   } catch (error) {
     // A timeout/5xx can mean Stripe created the session. Keep its reservation
     // until the worker reconciles Stripe; releasing it here could oversell.
-    if (
-      error instanceof Stripe.errors.StripeInvalidRequestError &&
-      error.statusCode === 400
-    ) {
+    if (error instanceof Stripe.errors.StripeInvalidRequestError && error.statusCode === 400) {
       await cancelOrder(order.id, "stripe_session_creation_rejected");
     }
     throw error;
@@ -458,9 +490,9 @@ export async function createCheckoutSession(
     recordEvent({
       type: "CHECKOUT_STARTED",
       orderId: order.id,
-      sellerId: seller.id,
-      purchaseLinkId: link.id,
-      productId: product.id,
+      sellerId: order.sellerId,
+      purchaseLinkId: order.purchaseLinkId ?? undefined,
+      productId: order.items[0].productId,
       amount,
       currency: currency.toUpperCase(),
       metadata: {},
@@ -468,9 +500,9 @@ export async function createCheckoutSession(
     recordEvent({
       type: "PAYMENT_STARTED",
       orderId: order.id,
-      sellerId: seller.id,
-      purchaseLinkId: link.id,
-      productId: product.id,
+      sellerId: order.sellerId,
+      purchaseLinkId: order.purchaseLinkId ?? undefined,
+      productId: order.items[0].productId,
       amount,
       currency: currency.toUpperCase(),
       metadata: { stripe_session_id: session.id },

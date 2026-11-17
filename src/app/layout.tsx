@@ -4,9 +4,9 @@ import { LanguageProvider } from "@/i18n/LanguageProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "RouteFlow — The trust layer for social commerce",
+  title: "RouteFlow — De tus redes a una compra clara",
   description:
-    "Get paid with escrow, share a purchase link, and release funds when your buyer receives the product.",
+    "Comparte un enlace de compra o tu catálogo. Consulta tus pedidos, sigue la entrega y pide ayuda desde RouteFlow.",
 };
 
 export default function RootLayout({
@@ -16,7 +16,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="es">
         <body className="antialiased">
           <LanguageProvider>{children}</LanguageProvider>
         </body>

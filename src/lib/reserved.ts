@@ -27,7 +27,10 @@ export function slugifyUsername(raw: string, fallbackId: string): string {
     .slice(0, 24);
 
   if (!slug || RESERVED_USERNAMES.has(slug) || /^\d+$/.test(slug)) {
-    return `shop_${fallbackId.replace(/[^a-zA-Z0-9]/g, "").slice(-8).toLowerCase()}`;
+    return `shop_${fallbackId
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .slice(-8)
+      .toLowerCase()}`;
   }
 
   return slug;

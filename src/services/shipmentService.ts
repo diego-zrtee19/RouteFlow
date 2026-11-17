@@ -1,9 +1,5 @@
 import { ShippingRegistry } from "@/providers/shipping";
-import {
-  NotConfiguredError,
-  ValidationError,
-  DatabaseError,
-} from "@/lib/errors";
+import { NotConfiguredError, ValidationError, DatabaseError, AppError } from "@/lib/errors";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import {
   createShipment,
@@ -14,14 +10,9 @@ import {
 } from "@/repositories/shipmentRepository";
 import { transitionOrder } from "@/repositories/orderRepository";
 import { recordEvent } from "@/services/orderService";
-import type { CreateShipmentInput } from "@/providers/shipping/types";
-import type {
-  Order,
-  Seller,
-  Shipment,
-  ShipmentEvent,
-  ShippingProviderType,
-} from "@/domain/types";
+import { randomUUID } from "node:crypto";
+import type { ShipmentResult, CreateShipmentInput } from "@/providers/shipping/types";
+import type { Order, Seller, Shipment, ShipmentEvent, ShippingProviderType } from "@/domain/types";
 
 /**
  * SHIPMENT SERVICE.
@@ -62,16 +53,15 @@ export async function dispatchOrder(
     throw new ValidationError("Only a paid order can be dispatched");
   }
   if (order.deliveryMethod !== "shipping") {
-    throw new ValidationError(
-      "La entrega coordinada se confirma con el NIP del comprador.",
-    );
+    throw new ValidationError("La entrega coordinada se confirma con el NIP del comprador.");
   }
   const priorShipment = await findShipmentByOrder(order.id);
-  if (priorShipment) return priorShipment;
+  if (priorShipment) {
+    if (["PAID", "READY_TO_SHIP"].includes(order.status)) await transitionOrder(order, "SHIPPED");
+    return priorShipment;
+  }
   if (!["PAID", "READY_TO_SHIP"].includes(order.status)) {
-    throw new ValidationError(
-      "El estado del pedido no permite generar una etiqueta.",
-    );
+    throw new ValidationError("El estado del pedido no permite generar una etiqueta.");
   }
 
   // 2. The seller must have configured a real origin.
@@ -81,21 +71,15 @@ export async function dispatchOrder(
     .eq("id", order.id)
     .eq("seller_id", seller.id)
     .single();
-  if (profileError)
-    throw new DatabaseError("No se pudo consultar el paquete del pedido");
+  if (profileError) throw new DatabaseError("No se pudo consultar el paquete del pedido");
   const profile = stored.shipping_profile as {
     origin?: typeof seller.shipFromAddress;
     weightKg?: number;
     dimensions?: { length: number; width: number; height: number };
   } | null;
   const origin = profile?.origin ?? seller.shipFromAddress;
-  if (
-    stored.shipping_service &&
-    options.serviceCode !== stored.shipping_service
-  )
-    throw new ValidationError(
-      "Utiliza el servicio FedEx que el comprador pagó",
-    );
+  if (stored.shipping_service && options.serviceCode !== stored.shipping_service)
+    throw new ValidationError("Utiliza el servicio FedEx que el comprador pagó");
   if (!origin) {
     throw new ValidationError(
       "Shipping is not configured for this store. Add a ship-from address in Settings before creating a shipment.",
@@ -107,9 +91,7 @@ export async function dispatchOrder(
   assertAddressComplete(order.shippingAddress, "delivery");
 
   // 4. The product must declare a real weight.
-  const weightKg = profile?.weightKg
-    ? Number(profile.weightKg)
-    : await resolveProductWeight(order);
+  const weightKg = profile?.weightKg ? Number(profile.weightKg) : await resolveProductWeight(order);
   if (weightKg === null) {
     throw new ValidationError(
       "This product has no shipping weight configured, so a real label cannot be created.",
@@ -154,18 +136,68 @@ export async function dispatchOrder(
     },
     packageDetails: {
       weightKg,
-      description: order.items.map(item => `${item.title} x${item.quantity}`).join(", ").slice(0, 200) || "Package",
+      description:
+        order.items
+          .map((item) => `${item.title} x${item.quantity}`)
+          .join(", ")
+          .slice(0, 200) || "Package",
       dimensions: profile?.dimensions ?? undefined,
     },
   };
 
-  const result = await provider.createShipment(input);
+  // Durable unique claim BEFORE the carrier call. Never expire/retry unknown
+  // outcomes: FedEx can accept a label even if its response times out.
+  const owner = randomUUID();
+  const { data: claim, error: claimError } = await getSupabaseAdmin().rpc(
+    "claim_shipment_dispatch",
+    {
+      p_order_id: order.id,
+      p_seller_id: seller.id,
+      p_owner: owner,
+      p_provider: options.provider,
+      p_service: options.serviceCode,
+    },
+  );
+  if (claimError || !claim) throw new DatabaseError("No se pudo proteger la generación de la guía");
+  if (claim.provider !== options.provider || claim.service_code !== options.serviceCode)
+    throw new AppError(
+      "CONFLICT",
+      "Ya existe un intento con otro servicio. Contacta a soporte.",
+      409,
+    );
+  let result: ShipmentResult;
+  if (claim.owner_token === owner) {
+    try {
+      result = await provider.createShipment(input);
+      if (!result.success) throw new Error(result.error ?? "Carrier rejected shipment");
+      // Save the provider response first so storage/database retries reuse the
+      // SAME shipment, including its PDF, without buying another label.
+      const { error } = await getSupabaseAdmin()
+        .from("shipment_dispatch_attempts")
+        .update({ status: "CREATED", result, updated_at: new Date().toISOString() })
+        .eq("order_id", order.id)
+        .eq("owner_token", owner);
+      if (error) throw error;
+    } catch {
+      throw new AppError(
+        "CONFLICT",
+        "La generación requiere revisión. No se comprará otra guía automáticamente; contacta a soporte.",
+        409,
+      );
+    }
+  } else if (claim.status === "CREATED" && claim.result?.success) {
+    result = claim.result as ShipmentResult;
+  } else {
+    throw new AppError(
+      "CONFLICT",
+      "La guía está en proceso o requiere revisión. Actualiza el pedido; no generes otro envío.",
+      409,
+    );
+  }
 
   if (!result.success) {
     // Surface the carrier's reason instead of reporting a false success.
-    throw new DatabaseError(
-      result.error ?? `${provider.name} could not create the shipment`,
-    );
+    throw new DatabaseError(result.error ?? `${provider.name} could not create the shipment`);
   }
 
   let labelUrl = result.labelUrl ?? null;
@@ -226,14 +258,21 @@ export async function dispatchOrder(
  */
 export async function refreshTracking(
   order: Order,
-  provider: ShippingProviderType,
-): Promise<{ status: Shipment["status"]; events: ShipmentEvent[] }> {
+  provider?: ShippingProviderType,
+): Promise<{
+  status: Shipment["status"];
+  events: ShipmentEvent[];
+  carrier: string;
+  estimatedDelivery: string | null;
+}> {
   const shipment = await findShipmentByOrder(order.id);
   if (!shipment) {
     throw new ValidationError("This order has no shipment yet");
   }
 
-  const client = ShippingRegistry.getProvider(provider);
+  if (provider && provider !== shipment.provider)
+    throw new ValidationError("El transportista no coincide con el envío");
+  const client = ShippingRegistry.getProvider(shipment.provider);
   if (!client.isConfigured()) {
     throw new NotConfiguredError(
       `${client.name} is not configured, so tracking cannot be refreshed`,
@@ -242,7 +281,11 @@ export async function refreshTracking(
 
   const tracking = await client.getTracking(shipment.trackingNumber);
 
-  const updated = await updateShipmentStatus(shipment.id, tracking.status);
+  // A late stale carrier poll must not regress an already delivered parcel.
+  const requestedStatus = shipment.status === "DELIVERED" ? "DELIVERED" : tracking.status;
+  const updated = await updateShipmentStatus(shipment.id, requestedStatus);
+  if (!updated) throw new DatabaseError("No se pudo guardar el rastreo");
+  const status = updated.status;
 
   const scanned = Array.isArray(tracking.events) ? tracking.events : [];
   if (scanned.length > 0) {
@@ -260,18 +303,29 @@ export async function refreshTracking(
     );
   }
 
-  if (tracking.status === "DELIVERED" && updated) {
+  const next =
+    status === "DELIVERED"
+      ? "DELIVERED"
+      : ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY"].includes(status) &&
+          order.status === "SHIPPED"
+        ? "IN_TRANSIT"
+        : null;
+  if (next && ["SHIPPED", "IN_TRANSIT"].includes(order.status)) {
+    await transitionOrder(order, next);
+  }
+  if (next === "DELIVERED" && ["SHIPPED", "IN_TRANSIT"].includes(order.status)) {
     await recordEvent({
       type: "ORDER_DELIVERED",
       sellerId: order.sellerId,
       orderId: order.id,
       metadata: { tracking: shipment.trackingNumber },
     });
-    await transitionOrder(order, "DELIVERED");
   }
 
   return {
-    status: tracking.status,
+    status,
+    carrier: tracking.carrier,
+    estimatedDelivery: tracking.estimatedDelivery ?? shipment.estimatedDelivery,
     events: await listShipmentEvents(shipment.id),
   };
 }
@@ -288,10 +342,7 @@ async function resolveProductWeight(order: Order): Promise<number | null> {
     .in("id", productIds)
     .limit(1);
 
-  if (error)
-    throw new DatabaseError(
-      `Could not read the product weight: ${error.message}`,
-    );
+  if (error) throw new DatabaseError(`Could not read the product weight: ${error.message}`);
 
   const weight = data?.[0]?.weight_kg;
   if (weight === null || weight === undefined) return null;

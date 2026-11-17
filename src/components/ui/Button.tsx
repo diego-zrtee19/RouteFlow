@@ -6,6 +6,36 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   isLoading?: boolean;
 }
 
+/** Shared treatment for actions rendered as real links instead of nested buttons. */
+export function buttonStyles({
+  variant = "primary",
+  size = "md",
+  className = "",
+}: Pick<ButtonProps, "variant" | "size" | "className"> = {}) {
+  const base =
+    "inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border font-semibold leading-snug text-center select-none cursor-pointer transition-[background-color,border-color,box-shadow,color,transform] duration-200 motion-reduce:transition-none motion-safe:active:translate-y-px focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-accent-700 disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none disabled:transform-none [&_svg]:shrink-0";
+  const sizes = {
+    sm: "px-3.5 py-2 text-sm",
+    md: "px-4 py-2.5 text-sm",
+    lg: "min-h-12 px-6 py-3 text-base",
+  };
+  const variants = {
+    primary:
+      "border-accent-700 bg-accent-700 text-white shadow-[0_1px_2px_rgba(15,23,42,0.12)] hover:border-accent-600 hover:bg-accent-600 hover:shadow-[0_5px_14px_rgba(18,58,102,0.18)] active:bg-accent-900",
+    secondary:
+      "border-line bg-white text-ink shadow-[0_1px_2px_rgba(18,58,102,0.04)] hover:bg-surface hover:border-accent-300 active:bg-accent-50",
+    outline:
+      "border-line bg-transparent text-accent-700 hover:border-accent-700 hover:bg-accent-50 active:bg-accent-100",
+    ghost:
+      "border-transparent bg-transparent text-muted hover:bg-accent-50 hover:text-accent-700 active:bg-accent-100",
+    destructive:
+      "border-rose-700 bg-rose-700 text-white hover:border-rose-800 hover:bg-rose-800 active:bg-rose-900",
+    success:
+      "border-emerald-700 bg-emerald-700 text-white hover:border-emerald-800 hover:bg-emerald-800 active:bg-emerald-900",
+  };
+  return `${base} ${sizes[size]} ${variants[variant]} ${className}`;
+}
+
 export const Button: React.FC<ButtonProps> = ({
   children,
   variant = "primary",
@@ -15,28 +45,12 @@ export const Button: React.FC<ButtonProps> = ({
   className = "",
   ...props
 }) => {
-  const baseStyles = "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-hidden focus:ring-2 focus:ring-offset-2 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100 select-none cursor-pointer";
-
-  const sizeStyles = {
-    sm: "text-xs px-3 py-1.5 gap-1.5",
-    md: "text-sm px-4 py-2 gap-2",
-    lg: "text-base px-6 py-3 gap-2.5",
-  };
-
-  const variantStyles = {
-    primary: "bg-[#2563EB] hover:bg-[#1D4ED8] text-white focus:ring-[#2563EB]/40 shadow-xs shadow-blue-500/20",
-    secondary: "bg-white hover:bg-slate-50 text-[#0B1220] border border-slate-200 focus:ring-slate-300 shadow-xs",
-    destructive: "bg-brand-error hover:bg-red-700 text-white focus:ring-red-400 shadow-xs shadow-red-500/20",
-    outline: "bg-transparent hover:bg-slate-100 text-[#0B1220] border border-slate-300 focus:ring-slate-300",
-    ghost: "bg-transparent hover:bg-slate-100 text-brand-slate hover:text-[#0B1220] focus:ring-slate-200",
-    success: "bg-brand-success hover:bg-emerald-700 text-white focus:ring-emerald-400 shadow-xs",
-  };
-
   return (
     <button
       disabled={disabled || isLoading}
-      className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]} ${className}`}
+      className={buttonStyles({ variant, size, className })}
       {...props}
+      aria-busy={isLoading || props["aria-busy"]}
     >
       {isLoading ? (
         <svg
@@ -44,13 +58,17 @@ export const Button: React.FC<ButtonProps> = ({
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8v8H4z"
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
           />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
         </svg>
       ) : null}
       {children}

@@ -16,9 +16,10 @@ import {
   generateBuyerToken,
   generateOrderNumber,
   hashBuyerToken,
+  verifyBuyerToken,
 } from "@/lib/buyerToken";
-import { assertTransition } from "@/domain/orderStateMachine";
-import { recordEvent } from "@/services/orderService";
+
+import { recordEvent, transitionOrder as transitionOrderSafely } from "@/services/orderService";
 
 /**
  * ORDER REPOSITORY — orders + order_items.
@@ -91,10 +92,7 @@ export async function createOrderFromPurchaseLink(
   };
 }
 /** Loads an order scoped to its seller. Null when it is not theirs. */
-export async function findOrderForSeller(
-  orderId: string,
-  seller: Seller,
-): Promise<Order | null> {
+export async function findOrderForSeller(orderId: string, seller: Seller): Promise<Order | null> {
   const admin = getSupabaseAdmin();
   const { data, error } = await admin
     .from("orders")
@@ -103,8 +101,7 @@ export async function findOrderForSeller(
     .eq("seller_id", seller.id)
     .maybeSingle();
 
-  if (error)
-    throw new DatabaseError(`Could not load the order: ${error.message}`);
+  if (error) throw new DatabaseError(`Could not load the order: ${error.message}`);
   return data ? rowToOrder(data as Record<string, unknown>) : null;
 }
 
@@ -140,20 +137,17 @@ export async function findOrderForBuyer(
     .eq("id", orderId)
     .maybeSingle();
 
-  if (error)
-    throw new DatabaseError(`Could not load the order: ${error.message}`);
+  if (error) throw new DatabaseError(`Could not load the order: ${error.message}`);
   if (!data) return null;
 
   const order = rowToOrder(data as Record<string, unknown>);
-  if (hashBuyerToken(buyerToken) !== order.buyerTokenHash) return null;
+  if (!verifyBuyerToken(buyerToken, order.buyerTokenHash)) return null;
 
   return order;
 }
 
 /** Finds an order by the hash of the buyer token (post-checkout redirect). */
-export async function findOrderByTokenHash(
-  buyerToken: string,
-): Promise<Order | null> {
+export async function findOrderByTokenHash(buyerToken: string): Promise<Order | null> {
   if (!buyerToken) return null;
 
   const admin = getSupabaseAdmin();
@@ -163,8 +157,7 @@ export async function findOrderByTokenHash(
     .eq("buyer_token_hash", hashBuyerToken(buyerToken))
     .maybeSingle();
 
-  if (error)
-    throw new DatabaseError(`Could not load the order: ${error.message}`);
+  if (error) throw new DatabaseError(`Could not load the order: ${error.message}`);
   return data ? rowToOrder(data as Record<string, unknown>) : null;
 }
 
@@ -174,36 +167,11 @@ export async function findOrderByTokenHash(
  * Ownership is re-asserted in the WHERE clause, so a foreign id cannot be
  * moved even if a caller passes one.
  */
-export async function transitionOrder(
-  order: Order,
-  to: OrderStatus,
-): Promise<Order> {
-  assertTransition(order.status, to);
-
-  // Re-applying the current status is a no-op (Stripe redelivers webhooks).
-  if (order.status === to) return order;
-
-  const admin = getSupabaseAdmin();
-  const patch: Record<string, unknown> = { status: to };
-  const now = new Date().toISOString();
-  if (to === "COMPLETED") patch.completed_at = now;
-  if (to === "CANCELLED") patch.cancelled_at = now;
-
-  const { data, error } = await admin
-    .from("orders")
-    .update(patch)
-    .eq("id", order.id)
-    .eq("seller_id", order.sellerId)
-    .select("*, order_items(*)")
-    .single();
-
-  if (error || !data) {
-    throw new DatabaseError(
-      `Could not update the order: ${error?.message ?? "unknown"}`,
-    );
-  }
-  return rowToOrder(data as Record<string, unknown>);
+export async function transitionOrder(order: Order, to: OrderStatus): Promise<Order> {
+  // Keep a single implementation for state validation and conditional writes.
+  return transitionOrderSafely(order, to);
 }
+
 /**
  * Marks an order paid. ONLY ever called from the verified Stripe webhook.
  *
@@ -224,8 +192,7 @@ export async function markOrderPaid(
     .eq("id", orderId)
     .maybeSingle();
 
-  if (error)
-    throw new DatabaseError(`Could not load the order: ${error.message}`);
+  if (error) throw new DatabaseError(`Could not load the order: ${error.message}`);
   if (!order) return null;
 
   const expected = Number(order.amount);
@@ -242,9 +209,7 @@ export async function markOrderPaid(
   }
 
   if (String(order.currency).toLowerCase() !== String(currency).toLowerCase()) {
-    throw new ValidationError(
-      "Stripe currency does not match the order currency",
-    );
+    throw new ValidationError("Stripe currency does not match the order currency");
   }
 
   // Idempotent: a redelivered webhook must not change anything.
@@ -264,9 +229,7 @@ export async function markOrderPaid(
     .single();
 
   if (updateError || !updated) {
-    throw new DatabaseError(
-      `Could not mark the order paid: ${updateError?.message}`,
-    );
+    throw new DatabaseError(`Could not mark the order paid: ${updateError?.message}`);
   }
 
   await recordEvent({
@@ -282,10 +245,7 @@ export async function markOrderPaid(
 }
 
 /** Records a failed payment without cancelling the order. */
-export async function markOrderPaymentFailed(
-  orderId: string,
-  reason: string,
-): Promise<void> {
+export async function markOrderPaymentFailed(orderId: string, reason: string): Promise<void> {
   const admin = getSupabaseAdmin();
   await admin
     .from("orders")
@@ -296,10 +256,7 @@ export async function markOrderPaymentFailed(
 }
 
 /** Cancels an order that never got paid. */
-export async function cancelOrder(
-  orderId: string,
-  reason: string,
-): Promise<void> {
+export async function cancelOrder(orderId: string, reason: string): Promise<void> {
   const { error } = await getSupabaseAdmin().rpc("cancel_unpaid_purchase", {
     p_order_id: orderId,
     p_reason: reason,
@@ -308,15 +265,9 @@ export async function cancelOrder(
 }
 
 /** Updates payment_status without touching the order status. */
-export async function setPaymentStatus(
-  orderId: string,
-  status: PaymentStatus,
-): Promise<void> {
+export async function setPaymentStatus(orderId: string, status: PaymentStatus): Promise<void> {
   const admin = getSupabaseAdmin();
-  await admin
-    .from("orders")
-    .update({ payment_status: status })
-    .eq("id", orderId);
+  await admin.from("orders").update({ payment_status: status }).eq("id", orderId);
 }
 
 /**
@@ -345,9 +296,7 @@ export function rowToShipment(row: Record<string, unknown>): Shipment {
 }
 
 /** Maps a `shipments` row (plus its events) to the domain type. */
-export function rowToShipmentEvent(
-  row: Record<string, unknown>,
-): ShipmentEvent {
+export function rowToShipmentEvent(row: Record<string, unknown>): ShipmentEvent {
   return {
     id: String(row.id),
     shipmentId: String(row.shipment_id),
@@ -401,19 +350,13 @@ export async function loadOrderContext(orderId: string): Promise<{
       .eq("shipment_id", shipmentRow.id)
       .order("occurred_at", { ascending: false });
 
-    shipmentEvents = ((eventRows ?? []) as Record<string, unknown>[]).map(
-      rowToShipmentEvent,
-    );
+    shipmentEvents = ((eventRows ?? []) as Record<string, unknown>[]).map(rowToShipmentEvent);
   }
 
   return {
-    shipment: shipmentRow
-      ? rowToShipment(shipmentRow as Record<string, unknown>)
-      : null,
+    shipment: shipmentRow ? rowToShipment(shipmentRow as Record<string, unknown>) : null,
     shipmentEvents,
-    dispute: disputeRow
-      ? rowToDispute(disputeRow as Record<string, unknown>)
-      : null,
+    dispute: disputeRow ? rowToDispute(disputeRow as Record<string, unknown>) : null,
   };
 }
 
@@ -423,9 +366,7 @@ export async function loadOrderContext(orderId: string): Promise<{
  * Used ONLY after a Stripe event has been signature-verified and its id has
  * been claimed, so it is safe to read any order by id. It performs no writes.
  */
-export async function findOrderByIdForWebhook(
-  orderId: string,
-): Promise<Order | null> {
+export async function findOrderByIdForWebhook(orderId: string): Promise<Order | null> {
   const admin = getSupabaseAdmin();
   const { data, error } = await admin
     .from("orders")
@@ -433,8 +374,7 @@ export async function findOrderByIdForWebhook(
     .eq("id", orderId)
     .maybeSingle();
 
-  if (error)
-    throw new DatabaseError(`Could not load the order: ${error.message}`);
+  if (error) throw new DatabaseError(`Could not load the order: ${error.message}`);
   return data ? rowToOrder(data as Record<string, unknown>) : null;
 }
 
@@ -460,8 +400,7 @@ export async function markOrderRefunded(
     .eq("id", orderId)
     .maybeSingle();
 
-  if (loadError)
-    throw new DatabaseError(`Could not load the order: ${loadError.message}`);
+  if (loadError) throw new DatabaseError(`Could not load the order: ${loadError.message}`);
   if (!existing) return null;
 
   if (existing.payment_status === "REFUNDED") {
@@ -480,9 +419,7 @@ export async function markOrderRefunded(
     .single();
 
   if (error || !updated) {
-    throw new DatabaseError(
-      `Could not mark the order refunded: ${error?.message}`,
-    );
+    throw new DatabaseError(`Could not mark the order refunded: ${error?.message}`);
   }
 
   await recordEvent({

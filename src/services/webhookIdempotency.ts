@@ -21,7 +21,14 @@ export type EventStatus = "RECEIVED" | "PROCESSING" | "PROCESSED" | "FAILED";
 
 export interface ClaimResult {
   claimed: boolean;
-  outcome: "claimed" | "reclaimed" | "already_processed" | "already_claimed" | "unavailable" | "invalid_lease_duration" | "not_found";
+  outcome:
+    | "claimed"
+    | "reclaimed"
+    | "already_processed"
+    | "already_claimed"
+    | "unavailable"
+    | "invalid_lease_duration"
+    | "not_found";
   eventId: string;
   status?: EventStatus;
   leaseExpiresAt?: string;
@@ -38,12 +45,12 @@ export interface ClaimResult {
 export async function claimStripeEvent(
   eventId: string,
   eventType: string,
-  payload: unknown
+  payload: unknown,
 ): Promise<ClaimResult> {
   if (!isSupabaseAdminAvailable()) {
     console.error(
       `[routeflow] cannot guarantee webhook idempotency: Supabase is not configured. ` +
-        `Event ${eventId} (${eventType}) was NOT processed.`
+        `Event ${eventId} (${eventType}) was NOT processed.`,
     );
     return {
       claimed: false,
@@ -140,7 +147,7 @@ export async function claimStripeEvent(
  */
 export async function markEventProcessed(
   eventId: string,
-  attemptCount: number
+  attemptCount: number,
 ): Promise<{ success: boolean; error?: string }> {
   if (!isSupabaseAdminAvailable()) {
     return { success: false, error: "Supabase not configured" };
@@ -170,7 +177,7 @@ export async function markEventProcessed(
 export async function markEventFailed(
   eventId: string,
   attemptCount: number,
-  errorMessage: string
+  errorMessage: string,
 ): Promise<{ success: boolean; error?: string }> {
   if (!isSupabaseAdminAvailable()) {
     return { success: false, error: "Supabase not configured" };

@@ -22,24 +22,28 @@ export function getSupabaseAdmin(): SupabaseClient {
   const urlCheck = checkSupabaseUrl(process.env[SUPABASE_ENV_VARS.url]);
   if (!urlCheck.ok) {
     throw new Error(
-      `Supabase no disponible: ${urlCheck.error}. Copia el Project URL y el service_role key desde Supabase Dashboard > Project Settings > API.`
+      `Supabase no disponible: ${urlCheck.error}. Copia el Project URL y el service_role key desde Supabase Dashboard > Project Settings > API.`,
     );
   }
 
   const keyCheck = checkSupabaseKey(
     process.env[SUPABASE_ENV_VARS.serviceRoleKey],
-    SUPABASE_ENV_VARS.serviceRoleKey
+    SUPABASE_ENV_VARS.serviceRoleKey,
   );
   if (!keyCheck.ok) {
     throw new Error(
-      `Supabase no disponible: ${keyCheck.error}. La variable ${SUPABASE_ENV_VARS.serviceRoleKey} es obligatoria para escrituras server-side (dashboard, pedidos, webhook de Stripe).`
+      `Supabase no disponible: ${keyCheck.error}. La variable ${SUPABASE_ENV_VARS.serviceRoleKey} es obligatoria para escrituras server-side (dashboard, pedidos, webhook de Stripe).`,
     );
   }
 
   if (!adminClient) {
-    adminClient = createClient(urlCheck.preview as string, process.env[SUPABASE_ENV_VARS.serviceRoleKey] as string, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
+    adminClient = createClient(
+      urlCheck.preview as string,
+      process.env[SUPABASE_ENV_VARS.serviceRoleKey] as string,
+      {
+        auth: { persistSession: false, autoRefreshToken: false },
+      },
+    );
   }
 
   return adminClient;

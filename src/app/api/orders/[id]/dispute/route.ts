@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { findOrderForBuyer } from "@/services/orderService";
 import { apiErrorResponse } from "@/lib/apiResponse";
-import { findOrderForBuyerIdentity, getVerifiedBuyerEmails, sameOriginBuyerAction } from "@/lib/buyerIdentity";
+import {
+  findOrderForBuyerIdentity,
+  getVerifiedBuyerEmails,
+  sameOriginBuyerAction,
+} from "@/lib/buyerIdentity";
 
 export const runtime = "nodejs";
 
@@ -20,10 +24,7 @@ const ALLOWED_REASONS: readonly string[] = [
  * SECURITY: previously any request bearing a valid order id could open a
  * dispute against someone else's order. The buyer token is now mandatory.
  */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = (await req.json().catch(() => ({}))) as {
     reason?: unknown;
@@ -32,32 +33,30 @@ export async function POST(
   };
 
   const presentedToken =
-    req.headers.get("x-buyer-token") ??
-    (typeof body?.token === "string" ? body.token : null);
+    req.headers.get("x-buyer-token") ?? (typeof body?.token === "string" ? body.token : null);
 
-  if (!presentedToken && (!sameOriginBuyerAction(req) || !(await getVerifiedBuyerEmails()).length)) {
+  if (
+    !presentedToken &&
+    (!sameOriginBuyerAction(req) || !(await getVerifiedBuyerEmails()).length)
+  ) {
     return apiErrorResponse("UNAUTHENTICATED", "Buyer token required", 401);
   }
 
   const reason = typeof body?.reason === "string" ? body.reason : "";
   const description =
-    typeof body?.description === "string"
-      ? body.description.trim().slice(0, 1000)
-      : "";
+    typeof body?.description === "string" ? body.description.trim().slice(0, 1000) : "";
 
   if (!ALLOWED_REASONS.includes(reason)) {
     return apiErrorResponse("VALIDATION_ERROR", "Invalid dispute reason", 400);
   }
   if (description.length < 3) {
-    return apiErrorResponse(
-      "VALIDATION_ERROR",
-      "A description is required",
-      400,
-    );
+    return apiErrorResponse("VALIDATION_ERROR", "A description is required", 400);
   }
 
   try {
-    const order = presentedToken ? await findOrderForBuyer(id, presentedToken) : await findOrderForBuyerIdentity(id);
+    const order = presentedToken
+      ? await findOrderForBuyer(id, presentedToken)
+      : await findOrderForBuyerIdentity(id);
     if (!order) {
       // Indistinguishable from an unknown id, on purpose.
       return apiErrorResponse("ORDER_NOT_FOUND", "Order not found", 404);
@@ -67,11 +66,7 @@ export async function POST(
       return apiErrorResponse("CONFLICT", "Order is not paid", 409);
     }
     if (order.status === "REFUNDED" || order.status === "CANCELLED") {
-      return apiErrorResponse(
-        "CONFLICT",
-        "Order no longer accepts a dispute",
-        409,
-      );
+      return apiErrorResponse("CONFLICT", "Order no longer accepts a dispute", 409);
     }
 
     const { getSupabaseAdmin } = await import("@/lib/supabaseAdmin");
@@ -82,19 +77,9 @@ export async function POST(
       p_reason: reason,
       p_description: description,
     });
-    if (error)
-      return apiErrorResponse(
-        "CONFLICT",
-        "El pedido no admite una nueva disputa",
-        409,
-      );
+    if (error) return apiErrorResponse("CONFLICT", "El pedido no admite una nueva disputa", 409);
     return NextResponse.json({ ok: true, disputeId: data });
   } catch (error) {
-    return apiErrorResponse(
-      "INTERNAL_ERROR",
-      "Could not open the dispute",
-      500,
-      error,
-    );
+    return apiErrorResponse("INTERNAL_ERROR", "Could not open the dispute", 500, error);
   }
 }

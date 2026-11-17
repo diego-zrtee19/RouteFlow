@@ -2,9 +2,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getStripe } from "@/lib/stripe";
 import { reconcileCheckoutSession } from "@/services/checkoutService";
 import type Stripe from "stripe";
-async function legacySession(
-  orderId: string,
-): Promise<Stripe.Checkout.Session> {
+async function legacySession(orderId: string): Promise<Stripe.Checkout.Session> {
   const db = getSupabaseAdmin();
   const { data: o, error } = await db
     .from("orders")
@@ -34,8 +32,7 @@ async function legacySession(
       ...(after ? { starting_after: after } : {}),
     });
     const found = sessions.data.find(
-      (s) =>
-        s.metadata?.order_id === orderId || s.client_reference_id === orderId,
+      (s) => s.metadata?.order_id === orderId || s.client_reference_id === orderId,
     );
     if (found) return found;
     if (!sessions.has_more) break;
@@ -61,8 +58,7 @@ export async function reviewLegacyReservations() {
     reconciled = 0;
   for (const o of orders ?? []) {
     let kind = "LEGACY_INVENTORY_REVIEW",
-      message =
-        "Compra antigua sin pagar. Confirma si se reservó inventario antes de cancelarla.";
+      message = "Compra antigua sin pagar. Confirma si se reservó inventario antes de cancelarla.";
     try {
       const session = await legacySession(o.id);
       if (session.payment_status === "paid") {
@@ -91,20 +87,18 @@ export async function reviewLegacyReservations() {
       message =
         "No se pudo verificar el pago antiguo con la cuenta Stripe actual. No se modificó el pedido ni el inventario.";
     }
-    const { error: e } = await db
-      .from("operational_alerts")
-      .upsert(
-        {
-          dedupe_key: `legacy:${o.id}`,
-          kind,
-          seller_id: o.seller_id,
-          order_id: o.id,
-          message,
-          status: "OPEN",
-          last_seen_at: new Date().toISOString(),
-        },
-        { onConflict: "dedupe_key" },
-      );
+    const { error: e } = await db.from("operational_alerts").upsert(
+      {
+        dedupe_key: `legacy:${o.id}`,
+        kind,
+        seller_id: o.seller_id,
+        order_id: o.id,
+        message,
+        status: "OPEN",
+        last_seen_at: new Date().toISOString(),
+      },
+      { onConflict: "dedupe_key" },
+    );
     if (e) throw e;
     reviewRequired++;
   }
@@ -118,9 +112,7 @@ export async function recoverLegacyReservation(
   const db = getSupabaseAdmin();
   const { data: o, error } = await db
     .from("orders")
-    .select(
-      "id,created_at,payment_status,stock_released_at,reservation_expires_at",
-    )
+    .select("id,created_at,payment_status,stock_released_at,reservation_expires_at")
     .eq("id", orderId)
     .eq("seller_id", sellerId)
     .maybeSingle();
@@ -136,12 +128,9 @@ export async function recoverLegacyReservation(
   let session = await legacySession(orderId);
   if (session.payment_status === "paid") {
     await reconcileCheckoutSession(session);
-    throw new Error(
-      "Stripe confirma un pago. El inventario permanece reservado",
-    );
+    throw new Error("Stripe confirma un pago. El inventario permanece reservado");
   }
-  if (session.status === "open")
-    session = await getStripe().checkout.sessions.expire(session.id);
+  if (session.status === "open") session = await getStripe().checkout.sessions.expire(session.id);
   if (session.status !== "expired")
     throw new Error("El pago sigue pendiente en Stripe; no se cancelará");
   const { data, error: e } = await db.rpc("cancel_legacy_reservation", {

@@ -17,10 +17,7 @@ check(
   process.env.STRIPE_SECRET_KEY?.startsWith("sk_live_") &&
     process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.startsWith("pk_live_"),
 );
-check(
-  "Firma de webhooks configurada",
-  process.env.STRIPE_WEBHOOK_SECRET?.startsWith("whsec_"),
-);
+check("Firma de webhooks configurada", process.env.STRIPE_WEBHOOK_SECRET?.startsWith("whsec_"));
 check(
   "Clerk de producción",
   process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_live_") &&

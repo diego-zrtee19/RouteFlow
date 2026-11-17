@@ -33,7 +33,7 @@ export interface CreatePurchaseLinkResult {
  */
 export async function createPurchaseLink(
   seller: Seller,
-  productId: string
+  productId: string,
 ): Promise<CreatePurchaseLinkResult | null> {
   const admin = getSupabaseAdmin();
 
@@ -78,7 +78,7 @@ export async function createPurchaseLink(
   }
 
   throw new DatabaseError(
-    `Could not allocate a unique public id after ${MAX_PUBLIC_ID_ATTEMPTS} attempts`
+    `Could not allocate a unique public id after ${MAX_PUBLIC_ID_ATTEMPTS} attempts`,
   );
 }
 
@@ -90,7 +90,7 @@ export async function createPurchaseLink(
  * which link ids a seller has used.
  */
 export async function resolvePublicPurchaseLink(
-  publicId: string
+  publicId: string,
 ): Promise<{ link: PurchaseLink; product: Product; seller: Seller } | null> {
   const admin = getSupabaseAdmin();
 
@@ -99,7 +99,6 @@ export async function resolvePublicPurchaseLink(
     .select("*")
     .eq("public_id", publicId)
     .maybeSingle();
-
 
   if (error) throw new DatabaseError(`Could not resolve the link: ${error.message}`);
   if (!link) return null;
@@ -146,7 +145,10 @@ export async function recordPurchaseLinkView(linkId: string): Promise<void> {
     .maybeSingle();
 
   const current = Number(data?.view_count ?? 0);
-  await admin.from("purchase_links").update({ view_count: current + 1 }).eq("id", linkId);
+  await admin
+    .from("purchase_links")
+    .update({ view_count: current + 1 })
+    .eq("id", linkId);
 }
 
 /** All links owned by a seller, newest first. */
@@ -166,7 +168,7 @@ export async function listPurchaseLinksForSeller(seller: Seller): Promise<Purcha
 export async function setPurchaseLinkStatus(
   seller: Seller,
   linkId: string,
-  status: PurchaseLinkStatus
+  status: PurchaseLinkStatus,
 ): Promise<PurchaseLink | null> {
   const admin = getSupabaseAdmin();
 

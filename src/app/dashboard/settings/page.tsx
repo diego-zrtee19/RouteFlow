@@ -1,6 +1,7 @@
 "use client";
 
 import { ConnectSetup } from "@/components/dashboard/ConnectSetup";
+import { InstagramConnection } from "@/components/dashboard/InstagramConnection";
 import React, { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Card } from "@/components/ui/Card";
@@ -85,9 +86,7 @@ export default function SettingsPage() {
           bio,
           contactEmail: email,
           contactPhone: phone,
-          ...(Object.values(origin).some(Boolean)
-            ? { shippingAddress: origin }
-            : {}),
+          ...(Object.values(origin).some(Boolean) ? { shippingAddress: origin } : {}),
         }),
       });
 
@@ -112,21 +111,16 @@ export default function SettingsPage() {
     <DashboardLayout>
       <div className="max-w-2xl space-y-6">
         <ConnectSetup />
+        <InstagramConnection />
         <div>
-          <h1 className="text-2xl font-extrabold text-[#0B1220]">
-            {t("dashboard.settings.title")}
-          </h1>
-          <p className="text-sm text-slate-500">
-            {t("dashboard.settings.subtitle")}
-          </p>
+          <h1 className="text-2xl font-semibold text-ink">{t("dashboard.settings.title")}</h1>
+          <p className="text-sm text-slate-500">{t("dashboard.settings.subtitle")}</p>
         </div>
 
         <Card className="p-6">
           <div className="flex flex-wrap items-center justify-between gap-3 pb-5 mb-5 border-b border-slate-100">
             <div>
-              <h2 className="text-sm font-bold text-[#0B1220]">
-                {t("dashboard.settings.language")}
-              </h2>
+              <h2 className="text-sm font-semibold text-ink">{t("dashboard.settings.language")}</h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 {t("dashboard.settings.languageHint")}
               </p>
@@ -142,11 +136,11 @@ export default function SettingsPage() {
               required
             />
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+              <label className="block text-xs font-medium text-slate-700 mb-1.5">
                 {t("dashboard.settings.bio")}
               </label>
               <textarea
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-[#0B1220] h-20"
+                className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-sm text-ink h-20"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
               />
@@ -179,8 +173,8 @@ export default function SettingsPage() {
             )}
             {origin.fullName?.includes("DEMO") && (
               <p className="text-sm text-amber-700">
-                Dirección ficticia de demostración. Sustitúyela por tu dirección
-                real antes de utilizar FedEx en producción.
+                Dirección ficticia de demostración. Sustitúyela por tu dirección real antes de
+                utilizar FedEx en producción.
               </p>
             )}
             <p className="text-sm text-slate-500">
@@ -213,18 +207,9 @@ export default function SettingsPage() {
               </p>
             )}
             <div className="pt-2">
-              <Button
-                type="submit"
-                size="md"
-                isLoading={saving}
-                disabled={!seller || saving}
-              >
-                {saved ? (
-                  <Check className="w-4 h-4 mr-1 text-emerald-300" />
-                ) : null}
-                {saved
-                  ? t("dashboard.settings.saved")
-                  : t("dashboard.settings.save")}
+              <Button type="submit" size="md" isLoading={saving} disabled={!seller || saving}>
+                {saved ? <Check className="w-4 h-4 mr-1 text-emerald-300" /> : null}
+                {saved ? t("dashboard.settings.saved") : t("dashboard.settings.save")}
               </Button>
             </div>
           </form>

@@ -64,14 +64,9 @@ export async function POST() {
           kycStatus: seller.kycStatus,
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
-    return apiErrorResponse(
-      "INTERNAL_ERROR",
-      "Could not create the seller profile",
-      500,
-      error
-    );
+    return apiErrorResponse("INTERNAL_ERROR", "Could not create the seller profile", 500, error);
   }
 }

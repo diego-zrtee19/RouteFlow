@@ -1,0 +1,17 @@
+node_modules/
+.next*/
+.vercel/
+.routeflow-data/
+coverage/
+out/
+dist/
+build/
+.env*
+package-lock.json
+next-env.d.ts
+*.tsbuildinfo
+*.sql
+**/*.md
+!README.md
+!CONTRIBUTING.md
+!docs/development/*.md

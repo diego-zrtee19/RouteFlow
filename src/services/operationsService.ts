@@ -1,3 +1,4 @@
+import { refreshDueTracking } from "@/services/trackingOperations";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { notificationMessage, readableNotificationBody } from "@/domain/notificationMessage";
 import { getStripe, isStripeTestMode } from "@/lib/stripe";
@@ -19,10 +20,7 @@ export async function processNotifications() {
   for (const job of jobs ?? []) {
     try {
       // Development is a durable preview inbox. Activating real mail is explicit configuration.
-      if (
-        process.env.ROUTEFLOW_EMAIL_DELIVERY !== "enabled" ||
-        isStripeTestMode()
-      ) {
+      if (process.env.ROUTEFLOW_EMAIL_DELIVERY !== "enabled" || isStripeTestMode()) {
         const { error: e } = await db
           .from("notification_outbox")
           .update({ status: "PREVIEW", locked_at: null })
@@ -31,14 +29,8 @@ export async function processNotifications() {
         preview++;
         continue;
       }
-      if (
-        !process.env.RESEND_API_KEY ||
-        !process.env.ROUTEFLOW_EMAIL_FROM ||
-        !job.recipient
-      )
-        throw new Error(
-          "Configura el correo del vendedor y el proveedor de notificaciones",
-        );
+      if (!process.env.RESEND_API_KEY || !process.env.ROUTEFLOW_EMAIL_FROM || !job.recipient)
+        throw new Error("Configura el correo del vendedor y el proveedor de notificaciones");
       const response = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -53,8 +45,7 @@ export async function processNotifications() {
           text: `${readableNotificationBody(job.body)}\n\n${notificationMessage(job.kind, job.audience)}${job.audience === "buyer" && process.env.NEXT_PUBLIC_APP_URL ? `\n\nSeguir mi pedido: ${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")}/order/${job.order_id}\nRecupera el acceso con el correo de tu compra: ${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")}/mis-compras` : ""}`,
         }),
       });
-      if (!response.ok)
-        throw new Error(`Proveedor de correo: HTTP ${response.status}`);
+      if (!response.ok) throw new Error(`Proveedor de correo: HTTP ${response.status}`);
       const { error: e } = await db
         .from("notification_outbox")
         .update({
@@ -119,16 +110,13 @@ async function executeOperations() {
           await reconcileCheckoutSession(session);
           continue;
         }
-        if (session.status === "open")
-          session = await getStripe().checkout.sessions.expire(id);
+        if (session.status === "open") session = await getStripe().checkout.sessions.expire(id);
         if (session.status !== "expired") continue;
       }
       await cancelOrder(order.id, "reservation_expired");
       expired++;
     } catch (e) {
-      errors.push(
-        `expiry:${order.id}:${e instanceof Error ? e.message : "error"}`,
-      );
+      errors.push(`expiry:${order.id}:${e instanceof Error ? e.message : "error"}`);
     }
   const { data: completed, error: completedError } = await db
     .from("orders")
@@ -143,20 +131,19 @@ async function executeOperations() {
       const result = await settleCompletedOrder(o.id);
       if ("transferId" in result) settled++;
     } catch (e) {
-      errors.push(
-        `settlement:${o.id}:${e instanceof Error ? e.message : "error"}`,
-      );
+      errors.push(`settlement:${o.id}:${e instanceof Error ? e.message : "error"}`);
     }
   const refunds = await recoverRefunds();
   errors.push(...refunds.errors);
   const legacy = await reviewLegacyReservations();
-  const { data: overdueDisputes, error: alertError } = await db.rpc(
-    "queue_overdue_disputes",
-  );
+  const { data: overdueDisputes, error: alertError } = await db.rpc("queue_overdue_disputes");
   if (alertError) throw alertError;
+  const tracking = await refreshDueTracking();
+  errors.push(...tracking.errors);
   const notifications = await processNotifications();
   return {
     expired,
+    tracking: tracking.refreshed,
     settled,
     notifications,
     refunds: refunds.recovered,
@@ -169,24 +156,17 @@ export async function runOperations() {
   const db = getSupabaseAdmin();
   try {
     const result = await executeOperations();
-    const { error } = await db
-      .from("operation_runs")
-      .insert({
-        status:
-          result.errors.length || result.notifications.failed
-            ? "FAILED"
-            : "SUCCEEDED",
-        summary: result,
-      });
+    const { error } = await db.from("operation_runs").insert({
+      status: result.errors.length || result.notifications.failed ? "FAILED" : "SUCCEEDED",
+      summary: result,
+    });
     if (error) throw error;
     return result;
   } catch (e) {
-    await db
-      .from("operation_runs")
-      .insert({
-        status: "FAILED",
-        summary: { error: "Operations failed; review server logs" },
-      });
+    await db.from("operation_runs").insert({
+      status: "FAILED",
+      summary: { error: "Operations failed; review server logs" },
+    });
     throw e;
   }
 }

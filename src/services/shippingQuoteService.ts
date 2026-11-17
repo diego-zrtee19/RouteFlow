@@ -35,10 +35,7 @@ async function shippingProfile(productId: string) {
   if (error || !product) throw new ValidationError("Producto no disponible");
   return { product, origin: product.sellers?.ship_from_address };
 }
-export async function quoteShipping(
-  publicId: string,
-  address: CheckoutInput["address"],
-) {
+export async function quoteShipping(publicId: string, address: CheckoutInput["address"]) {
   if (!address.postalCode || !/^[A-Za-z]{2}$/.test(address.country ?? ""))
     throw new ValidationError("Completa el país y código postal");
   const { data: link, error } = await getSupabaseAdmin()
@@ -49,12 +46,9 @@ export async function quoteShipping(
     .maybeSingle();
   if (error || !link) throw new ValidationError("Enlace no disponible");
   const { product, origin } = await shippingProfile(link.product_id);
-  if (product.shipping_payer === "seller")
-    return { payer: "seller", quotes: [], amount: 0 };
+  if (product.shipping_payer === "seller") return { payer: "seller", quotes: [], amount: 0 };
   if (!origin || !product.weight_kg || !product.package_dimensions)
-    throw new ValidationError(
-      "El vendedor debe configurar origen, peso y dimensiones",
-    );
+    throw new ValidationError("El vendedor debe configurar origen, peso y dimensiones");
   const rates = await new FedExShippingProvider().getRates({
     origin,
     destination: {
@@ -72,9 +66,7 @@ export async function quoteShipping(
       r.currency.toUpperCase() === product.currency.toUpperCase(),
   );
   if (!valid.length)
-    throw new ValidationError(
-      "No hay tarifas disponibles en la moneda de este producto",
-    );
+    throw new ValidationError("No hay tarifas disponibles en la moneda de este producto");
   const fingerprint = quoteFingerprint(
     address,
     origin,
@@ -96,15 +88,11 @@ export async function quoteShipping(
   if (writeError) throw new ValidationError("No se pudo guardar la cotización");
   return { payer: "buyer", quotes: data };
 }
-export async function validateShippingQuote(
-  input: CheckoutInput,
-  productId: string,
-) {
+export async function validateShippingQuote(input: CheckoutInput, productId: string) {
   if (input.deliveryMethod !== "shipping") return;
   const { product, origin } = await shippingProfile(productId);
   if (product.shipping_payer === "seller") return;
-  if (!input.quoteId)
-    throw new ValidationError("Cotiza el envío antes de pagar");
+  if (!input.quoteId) throw new ValidationError("Cotiza el envío antes de pagar");
   const { data, error } = await getSupabaseAdmin()
     .from("shipping_quotes")
     .select("*")
@@ -116,14 +104,7 @@ export async function validateShippingQuote(
     !data ||
     new Date(data.expires_at).getTime() <= Date.now() ||
     data.fingerprint !==
-      quoteFingerprint(
-        input.address,
-        origin,
-        product.weight_kg,
-        product.package_dimensions,
-      )
+      quoteFingerprint(input.address, origin, product.weight_kg, product.package_dimensions)
   )
-    throw new ValidationError(
-      "La cotización venció o cambió la dirección; vuelve a cotizar",
-    );
+    throw new ValidationError("La cotización venció o cambió la dirección; vuelve a cotizar");
 }

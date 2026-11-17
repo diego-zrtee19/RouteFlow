@@ -3,20 +3,11 @@ import { randomUUID } from "node:crypto";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getStripe } from "@/lib/stripe";
 import { createCheckoutSession } from "@/services/checkoutService";
-import {
-  quoteShipping,
-  validateShippingQuote,
-} from "@/services/shippingQuoteService";
-import {
-  processNotifications,
-  runOperations,
-} from "@/services/operationsService";
+import { quoteShipping, validateShippingQuote } from "@/services/shippingQuoteService";
+import { processNotifications, runOperations } from "@/services/operationsService";
 import { startConnect, connectStatus } from "@/services/connectService";
 async function main() {
-  assert.equal(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    "https://xnnkcgzijlpwxnvarqng.supabase.co",
-  );
+  assert.equal(process.env.NEXT_PUBLIC_SUPABASE_URL, "https://xnnkcgzijlpwxnvarqng.supabase.co");
   assert.ok(process.env.STRIPE_SECRET_KEY?.startsWith("sk_test_"));
   assert.equal(process.env.FEDEX_BASE_URL, "https://apis-sandbox.fedex.com");
   const db = getSupabaseAdmin();
@@ -100,25 +91,14 @@ async function main() {
     };
     await validateShippingQuote(input, productId!);
     await assert.rejects(
-      validateShippingQuote(
-        { ...input, address: { ...address, postalCode: "99999" } },
-        productId!,
-      ),
+      validateShippingQuote({ ...input, address: { ...address, postalCode: "99999" } }, productId!),
     );
-    console.log(
-      "PASS: real FedEx sandbox quote, currency, address tampering rejected",
-    );
-    const checkout = await createCheckoutSession(
-      input,
-      "http://localhost:3000",
-    );
+    console.log("PASS: real FedEx sandbox quote, currency, address tampering rejected");
+    const checkout = await createCheckoutSession(input, "http://localhost:3000");
     orderId = checkout.order.id;
     sessionId = checkout.sessionId;
     const session = await getStripe().checkout.sessions.retrieve(sessionId);
-    assert.equal(
-      session.amount_total,
-      Math.round((100 + Number(quote.amount)) * 100),
-    );
+    assert.equal(session.amount_total, Math.round((100 + Number(quote.amount)) * 100));
     assert.equal(session.currency, "usd");
     assert.ok(session.expires_at <= Math.floor(Date.now() / 1000) + 31 * 60);
     const { data: reserved } = await db
@@ -149,27 +129,19 @@ async function main() {
     assert.ok(restored);
     assert.equal(restored.stock, 2);
     await runOperations();
-    const { data: twice } = await db
-      .from("products")
-      .select("stock")
-      .eq("id", productId)
-      .single();
+    const { data: twice } = await db.from("products").select("stock").eq("id", productId).single();
     assert.ok(twice);
     assert.equal(twice.stock, 2);
-    console.log(
-      "PASS: automatic worker recovers abandoned inventory exactly once",
-    );
-    const { error: noteError } = await db
-      .from("notification_outbox")
-      .insert({
-        order_id: orderId,
-        seller_id: sellerId,
-        audience: "seller",
-        kind: "TEST",
-        recipient: "seller@example.com",
-        subject: "Test preview",
-        body: "Development test",
-      });
+    console.log("PASS: automatic worker recovers abandoned inventory exactly once");
+    const { error: noteError } = await db.from("notification_outbox").insert({
+      order_id: orderId,
+      seller_id: sellerId,
+      audience: "seller",
+      kind: "TEST",
+      recipient: "seller@example.com",
+      subject: "Test preview",
+      body: "Development test",
+    });
     assert.ifError(noteError);
     await processNotifications();
     const { data: note } = await db
@@ -187,9 +159,7 @@ async function main() {
       const status = await connectStatus(sellerId!);
       assert.equal(status.connected, true);
       assert.equal(status.testMode, true);
-      console.log(
-        "PASS: Stripe Connect TEST onboarding URL and real capability status",
-      );
+      console.log("PASS: Stripe Connect TEST onboarding URL and real capability status");
     } catch (e) {
       console.log(
         "CONNECT CONFIGURATION BLOCKER:",
@@ -199,8 +169,7 @@ async function main() {
   } finally {
     if (sessionId) {
       const session = await getStripe().checkout.sessions.retrieve(sessionId);
-      if (session.status === "open")
-        await getStripe().checkout.sessions.expire(sessionId);
+      if (session.status === "open") await getStripe().checkout.sessions.expire(sessionId);
     }
     if (sellerId) {
       const { data: s } = await db
@@ -208,8 +177,7 @@ async function main() {
         .select("stripe_account_id")
         .eq("id", sellerId)
         .single();
-      if (s?.stripe_account_id)
-        await getStripe().accounts.del(s.stripe_account_id);
+      if (s?.stripe_account_id) await getStripe().accounts.del(s.stripe_account_id);
     }
     if (orderId) {
       await db.from("events").delete().eq("order_id", orderId);

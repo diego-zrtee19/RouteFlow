@@ -11,7 +11,7 @@ export const runtime = "nodejs";
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ trackingNumber: string }> }
+  { params }: { params: Promise<{ trackingNumber: string }> },
 ) {
   const { trackingNumber } = await params;
   const { searchParams } = new URL(req.url);
@@ -27,7 +27,7 @@ export async function GET(
     if (!shippingProvider.isConfigured()) {
       return NextResponse.json(
         { error: "provider_not_configured", provider, status: "NOT_CONFIGURED" },
-        { status: 503 }
+        { status: 503 },
       );
     }
 
@@ -39,10 +39,8 @@ export async function GET(
     });
   } catch (error) {
     console.error("Tracking request failed:", error);
-    const errorMessage = error instanceof Error ? error.message : "Tracking service temporarily unavailable";
-    return NextResponse.json(
-      { error: errorMessage, provider },
-      { status: 500 }
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : "Tracking service temporarily unavailable";
+    return NextResponse.json({ error: errorMessage, provider }, { status: 500 });
   }
 }

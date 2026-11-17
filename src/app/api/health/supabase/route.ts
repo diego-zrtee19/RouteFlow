@@ -70,17 +70,45 @@ interface HealthBody {
   totalLatencyMs: number | null;
 }
 
+// Public health is deliberately minimal. Bound expensive probes per instance;
+// diagnostic details, project identifiers and key previews never leave the server.
+let probe: { expires: number; result: Promise<{ status: string; httpStatus: number }> } | undefined;
 export async function GET() {
+  if (!probe || probe.expires < Date.now()) {
+    probe = {
+      expires: Date.now() + 30_000,
+      result: (async () => {
+        try {
+          const response = await diagnose();
+          const body = await response.json();
+          return {
+            status: body.status === "connected" ? "connected" : "unavailable",
+            httpStatus: response.ok ? 200 : 503,
+          };
+        } catch {
+          return { status: "unavailable", httpStatus: 503 };
+        }
+      })(),
+    };
+  }
+  const health = await probe.result;
+  return NextResponse.json(
+    { status: health.status },
+    { status: health.httpStatus, headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+async function diagnose() {
   const startedAt = Date.now();
 
   const urlCheck = checkSupabaseUrl(process.env[SUPABASE_ENV_VARS.url]);
   const anonCheck = checkSupabaseKey(
     process.env[SUPABASE_ENV_VARS.anonKey],
-    SUPABASE_ENV_VARS.anonKey
+    SUPABASE_ENV_VARS.anonKey,
   );
   const serviceCheck = checkSupabaseKey(
     process.env[SUPABASE_ENV_VARS.serviceRoleKey],
-    SUPABASE_ENV_VARS.serviceRoleKey
+    SUPABASE_ENV_VARS.serviceRoleKey,
   );
 
   const body: HealthBody = {
@@ -124,7 +152,7 @@ export async function GET() {
       `${SUPABASE_ENV_VARS.serviceRoleKey} is required to verify the connection`,
       "missing_service_role_key",
       503,
-      startedAt
+      startedAt,
     );
   }
 
@@ -154,12 +182,12 @@ export async function GET() {
       error: null,
       totalLatencyMs: Date.now() - startedAt,
     },
-    { status: 200 }
+    { status: 200 },
   );
 }
 
 /**
- * Queries a table that must exist once supabase_schema_v2.sql is applied.
+ * Queries the canonical sellers table; setup instructions live in docs/operations/supabase-setup.md.
  *
  * Uses the SERVICE ROLE key on purpose. The anon key returns 401 on the
  * PostgREST root of a healthy project, so an anon-key probe produces a false
@@ -217,7 +245,7 @@ async function probeTable(projectUrl: string, key: string): Promise<ProbeResult>
       latencyMs,
       httpStatus,
       error:
-        "La tabla `sellers` no existe. Ejecuta supabase_schema_v2.sql en el SQL Editor del proyecto.",
+        "La tabla `sellers` no existe. Revisa docs/operations/supabase-setup.md y el esquema del proyecto antes de aplicar cambios.",
       reason: "table_missing",
       detail: text.slice(0, 300),
     };
@@ -245,7 +273,7 @@ async function probeTable(projectUrl: string, key: string): Promise<ProbeResult>
       latencyMs,
       httpStatus,
       error:
-        "RLS blocked the read. Check the policies in supabase_schema_v2.sql, and that the key being used really is the service role key.",
+        "RLS blocked the read. Review the canonical schema and incremental migrations, and verify the configured server key. See docs/operations/supabase-setup.md.",
       reason: "rls_blocked",
       detail: text.slice(0, 300),
     };
@@ -374,10 +402,10 @@ function respond(
   error: string | null,
   reason: Reason,
   httpStatus: number,
-  startedAt: number
+  startedAt: number,
 ) {
   return NextResponse.json(
     { ...body, status, reason, error, totalLatencyMs: Date.now() - startedAt },
-    { status: httpStatus }
+    { status: httpStatus },
   );
 }

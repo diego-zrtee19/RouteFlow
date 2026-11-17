@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSeller, assertSellerOwns } from "@/lib/authz";
 import { apiErrorResponse } from "@/lib/apiResponse";
-import {
-  CheckoutError,
-  refundOrderWithStripe,
-} from "@/services/checkoutService";
+import { CheckoutError, refundOrderWithStripe } from "@/services/checkoutService";
 import { findOrderForSeller } from "@/services/orderService";
 import { StripeNotConfiguredError } from "@/lib/stripe";
 import { AppError } from "@/lib/errors";
@@ -22,10 +19,7 @@ export const runtime = "nodejs";
  * which fell back to the demo seller. Ownership is checked with
  * `assertSellerOwns`, so seller A cannot refund seller B's order.
  */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const auth = await requireSeller();
@@ -42,15 +36,9 @@ export async function POST(
     (typeof body.requestKey === "string" ? body.requestKey : undefined);
   if (
     requestKey &&
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      requestKey,
-    )
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestKey)
   )
-    return apiErrorResponse(
-      "VALIDATION_ERROR",
-      "Clave de idempotencia inválida",
-      400,
-    );
+    return apiErrorResponse("VALIDATION_ERROR", "Clave de idempotencia inválida", 400);
   const amount = body.amount != null ? Number(body.amount) : undefined;
 
   if (amount != null && (!Number.isFinite(amount) || amount <= 0)) {
@@ -69,11 +57,7 @@ export async function POST(
     }
 
     if (amount != null && amount > order.amount) {
-      return apiErrorResponse(
-        "VALIDATION_ERROR",
-        "Amount exceeds the order total",
-        400,
-      );
+      return apiErrorResponse("VALIDATION_ERROR", "Amount exceeds the order total", 400);
     }
 
     const result = await refundOrderWithStripe(order.id, amount, requestKey);
@@ -86,17 +70,12 @@ export async function POST(
       orderNumber: result.order.orderNumber,
     });
   } catch (error) {
-    if (error instanceof AppError)
-      return apiErrorResponse(error.code, error.message, error.status);
+    if (error instanceof AppError) return apiErrorResponse(error.code, error.message, error.status);
     if (error instanceof CheckoutError) {
       return apiErrorResponse("CONFLICT", error.message, error.status);
     }
     if (error instanceof StripeNotConfiguredError) {
-      return apiErrorResponse(
-        "NOT_CONFIGURED",
-        "Stripe is not configured",
-        503,
-      );
+      return apiErrorResponse("NOT_CONFIGURED", "Stripe is not configured", 503);
     }
     return apiErrorResponse("INTERNAL_ERROR", "Refund failed", 500, error);
   }

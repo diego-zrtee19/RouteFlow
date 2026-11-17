@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+import { PHASE_DEVELOPMENT_SERVER } from "next/constants.js";
 
 // Sellers paste their own image URLs into the product form, so the set of
 // possible hosts is not knowable at build time. `next/image` refuses any host
@@ -25,9 +26,23 @@ const remotePatterns = [
 
 const nextConfig = {
   reactStrictMode: true,
+  async rewrites() {
+    const host = process.env.ROUTEFLOW_ADMIN_HOSTNAME || "admin.localhost";
+    return {
+      beforeFiles: [
+        {
+          source: "/",
+          has: [{ type: "host", value: host.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") }],
+          destination: "/admin",
+        },
+      ],
+    };
+  },
   webpack: (config, { dev }) => {
-    // Avoid large-string disk-cache warnings and synced cache packs in OneDrive.
-    if (dev || /[\\/]OneDrive[\\/]/i.test(process.cwd())) config.cache = false;
+    // Reuse modules while the dev process runs, without synced disk cache packs.
+    // Disabling every cache forced costly recompilation on each route change.
+    if (dev) config.cache = { type: "memory" };
+    else if (/[\\/]OneDrive[\\/]/i.test(process.cwd())) config.cache = false;
     return config;
   },
   // Lint is intentionally NOT skipped during the build. It used to be
@@ -39,4 +54,8 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default (phase) => ({
+  ...nextConfig,
+  // A build must not overwrite manifests and chunks used by a running dev server.
+  distDir: phase === PHASE_DEVELOPMENT_SERVER ? ".next-dev" : ".next",
+});

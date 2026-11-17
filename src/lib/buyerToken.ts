@@ -36,8 +36,11 @@ export function hashBuyerToken(token: string): string {
  * Returns false for an empty token so that "no token supplied" is treated as
  * "not authorised" rather than accidentally matching an unset hash.
  */
-export function verifyBuyerToken(presented: string | null | undefined, storedHash: string): boolean {
-  if (!presented || !storedHash) return false;
+export function verifyBuyerToken(
+  presented: string | null | undefined,
+  storedHash: string,
+): boolean {
+  if (!presented || presented.length > 512 || !storedHash) return false;
 
   const presentedHash = Buffer.from(hashBuyerToken(presented), "hex");
   const expectedHash = Buffer.from(storedHash, "hex");

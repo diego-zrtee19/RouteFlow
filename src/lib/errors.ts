@@ -18,6 +18,7 @@ export type ErrorCode =
   | "VALIDATION_ERROR"
   | "NOT_FOUND"
   | "CONFLICT"
+  | "CHECKOUT_CLOSED"
   | "RATE_LIMITED"
   | "INTERNAL_ERROR"
   | "NOT_CONFIGURED";

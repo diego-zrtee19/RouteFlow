@@ -49,16 +49,18 @@ export default function SellerDisputesPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const anchor = window.location.hash.slice(1);
+    if (anchor.startsWith("case-order-"))
+      document.getElementById(anchor)?.scrollIntoView({ block: "start" });
+  }, [disputes]);
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#0B1220]">
-            {t("dashboard.disputes.title")}
-          </h1>
-          <p className="text-sm text-slate-500">
-            {t("dashboard.disputes.subtitle")}
-          </p>
+          <h1 className="text-2xl font-semibold text-ink">{t("dashboard.disputes.title")}</h1>
+          <p className="text-sm text-slate-500">{t("dashboard.disputes.subtitle")}</p>
         </div>
 
         {error ? (
@@ -70,7 +72,7 @@ export default function SellerDisputesPage() {
         ) : disputes.length === 0 ? (
           <Card className="p-12 text-center space-y-3">
             <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
-            <h3 className="text-base font-bold text-[#0B1220]">
+            <h3 className="text-base font-semibold text-ink">
               {t("dashboard.disputes.emptyTitle")}
             </h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -82,24 +84,21 @@ export default function SellerDisputesPage() {
             {disputes.map((disp) => (
               <Card
                 key={disp.id}
-                className="p-4 flex items-start justify-between"
+                id={`case-order-${disp.orderId}`}
+                className="p-4 flex items-start justify-between scroll-mt-20"
               >
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-[#0B1220]">
+                    <span className="font-bold text-sm text-ink">
                       {t("dashboard.disputes.order", { orderId: disp.orderId })}
                     </span>
-                    <Badge variant="error">
-                      {t(`status.dispute.${disp.status}`)}
-                    </Badge>
+                    <Badge variant="error">{t(`status.dispute.${disp.status}`)}</Badge>
                   </div>
                   <p className="text-xs text-slate-600 mt-1">
                     {t("dashboard.disputes.reason")}{" "}
                     <strong>{t(`status.reason.${disp.reason}`)}</strong>
                   </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {disp.description}
-                  </p>
+                  <p className="text-xs text-slate-500 mt-1">{disp.description}</p>
                   <DisputeManager id={disp.id} audience="seller" />
                 </div>
               </Card>

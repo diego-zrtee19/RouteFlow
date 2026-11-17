@@ -52,7 +52,7 @@ export class ShippingRegistry {
 
   static async getAllRates(
     origin: { postalCode: string; country: string },
-    destination: { postalCode: string; country: string }
+    destination: { postalCode: string; country: string },
   ): Promise<ShippingRate[]> {
     const allRates: ShippingRate[] = [];
     for (const provider of ShippingRegistry.providers.values()) {

@@ -48,11 +48,9 @@ describe("Webhook Idempotency V2", () => {
         error: null,
       });
 
-      const result = await claimStripeEvent(
-        "evt_test123",
-        "checkout.session.completed",
-        { test: true }
-      );
+      const result = await claimStripeEvent("evt_test123", "checkout.session.completed", {
+        test: true,
+      });
 
       expect(result.claimed).toBe(true);
       expect(result.outcome).toBe("claimed");
@@ -75,11 +73,9 @@ describe("Webhook Idempotency V2", () => {
         error: null,
       });
 
-      const result = await claimStripeEvent(
-        "evt_test123",
-        "checkout.session.completed",
-        { test: true }
-      );
+      const result = await claimStripeEvent("evt_test123", "checkout.session.completed", {
+        test: true,
+      });
 
       expect(result.claimed).toBe(true);
       expect(result.outcome).toBe("reclaimed");
@@ -98,11 +94,9 @@ describe("Webhook Idempotency V2", () => {
         error: null,
       });
 
-      const result = await claimStripeEvent(
-        "evt_test123",
-        "checkout.session.completed",
-        { test: true }
-      );
+      const result = await claimStripeEvent("evt_test123", "checkout.session.completed", {
+        test: true,
+      });
 
       expect(result.claimed).toBe(false);
       expect(result.outcome).toBe("already_processed");
@@ -122,11 +116,9 @@ describe("Webhook Idempotency V2", () => {
         error: null,
       });
 
-      const result = await claimStripeEvent(
-        "evt_test123",
-        "checkout.session.completed",
-        { test: true }
-      );
+      const result = await claimStripeEvent("evt_test123", "checkout.session.completed", {
+        test: true,
+      });
 
       expect(result.claimed).toBe(false);
       expect(result.outcome).toBe("already_claimed");
@@ -141,11 +133,9 @@ describe("Webhook Idempotency V2", () => {
         error: { message: "Connection failed" },
       });
 
-      const result = await claimStripeEvent(
-        "evt_test123",
-        "checkout.session.completed",
-        { test: true }
-      );
+      const result = await claimStripeEvent("evt_test123", "checkout.session.completed", {
+        test: true,
+      });
 
       expect(result.claimed).toBe(false);
       expect(result.outcome).toBe("unavailable");
@@ -164,11 +154,9 @@ describe("Webhook Idempotency V2", () => {
         error: null,
       });
 
-      const result = await claimStripeEvent(
-        "evt_test123",
-        "checkout.session.completed",
-        { test: true }
-      );
+      const result = await claimStripeEvent("evt_test123", "checkout.session.completed", {
+        test: true,
+      });
 
       expect(result.claimed).toBe(false);
       expect(result.outcome).toBe("invalid_lease_duration");

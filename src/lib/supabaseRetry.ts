@@ -70,7 +70,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 export async function retryOnTransientSupabaseError<T>(
   operation: () => Promise<T>,
-  { attempts = 3, baseDelayMs = 120 }: { attempts?: number; baseDelayMs?: number } = {}
+  { attempts = 3, baseDelayMs = 120 }: { attempts?: number; baseDelayMs?: number } = {},
 ): Promise<T> {
   let lastError: unknown;
 

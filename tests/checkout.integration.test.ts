@@ -143,9 +143,9 @@ describe("orderMatchesSessionAmount — defence in depth before marking paid", (
   });
 
   it("accepts when Stripe reports no total (nothing to contradict)", () => {
-    expect(
-      orderMatchesSessionAmount(order, { amount_total: null, currency: "mxn" } as never)
-    ).toBe(true);
+    expect(orderMatchesSessionAmount(order, { amount_total: null, currency: "mxn" } as never)).toBe(
+      true,
+    );
   });
 
   it("REJECTS a tampered amount", () => {

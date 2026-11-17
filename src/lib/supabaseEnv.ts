@@ -1,9 +1,9 @@
 /**
  * Shared Supabase environment validation.
  *
- * Both the browser client (`supabaseClient.ts`) and the service-role client
- * (`supabaseAdmin.ts`) need the same answers to two questions before they talk
- * to the network, and getting either wrong is expensive to debug:
+ * The administrative client and connection diagnostics share these checks
+ * before contacting the network. Application pages use the authorized API,
+ * rather than a separate browser database client:
  *
  *   1. Are the variables present and syntactically plausible?
  *   2. Does the project URL point at a real Supabase project?
@@ -120,7 +120,7 @@ export function isSupabaseAdminConfigured(): boolean {
     checkSupabaseUrl(process.env[SUPABASE_ENV_VARS.url]).ok &&
     checkSupabaseKey(
       process.env[SUPABASE_ENV_VARS.serviceRoleKey],
-      SUPABASE_ENV_VARS.serviceRoleKey
+      SUPABASE_ENV_VARS.serviceRoleKey,
     ).ok
   );
 }
