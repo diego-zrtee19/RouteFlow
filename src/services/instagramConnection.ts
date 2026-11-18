@@ -44,6 +44,7 @@ export function createInstagramLogin(config: Config, sellerId: string) {
     config_id: config.configId,
     redirect_uri: config.redirect.href,
     response_type: "code",
+    override_default_response_type: "true",
     prompt: "login",
     state,
   }).toString();

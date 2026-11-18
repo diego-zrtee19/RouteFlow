@@ -13,6 +13,8 @@ describe("Instagram seller authorization", () => {
     const state = url.searchParams.get("state");
     expect(url.origin).toBe("https://www.facebook.com");
     expect(url.searchParams.get("config_id")).toBe("456");
+    expect(url.searchParams.get("response_type")).toBe("code");
+    expect(url.searchParams.get("override_default_response_type")).toBe("true");
     expect(validInstagramState(state, cookie, "seller-a", config.secret)).toBe(true);
     expect(validInstagramState(state, cookie, "seller-b", config.secret)).toBe(false);
     expect(validInstagramState(state, undefined, "seller-a", config.secret)).toBe(false);
