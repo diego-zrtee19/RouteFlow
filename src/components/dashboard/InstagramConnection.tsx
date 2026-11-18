@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { MessageCircle } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonStyles } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 
 const endpoint = "/api/dashboard/instagram";
@@ -15,7 +16,7 @@ const notices: Record<string, string> = {
   failed: "Meta no pudo completar la conexión. Vuelve a intentarlo.",
 };
 
-type Connection = { available: boolean; username: string | null };
+type Connection = { available: boolean; username: string | null; repliesEnabled: boolean };
 
 export function InstagramConnection() {
   const [connection, setConnection] = useState<Connection | null>(null);
@@ -93,6 +94,29 @@ export function InstagramConnection() {
         <p role="alert" className="text-sm text-rose-700">
           {error}
         </p>
+      )}
+      {connection?.username && (
+        <div className="flex flex-wrap items-center gap-3">
+          <Link href="/dashboard/messages" className={buttonStyles({ size: "sm" })}>
+            Ver mensajes
+          </Link>
+          {!connection.repliesEnabled && (
+            <div className="space-y-2">
+              <p className="text-sm text-muted">
+                Autoriza otra vez tu cuenta para responder desde RouteFlow. La credencial se
+                guardará cifrada en el servidor; tus conversaciones se conservan.
+              </p>
+              <Button variant="secondary" size="sm" isLoading={busy} onClick={() => update("POST")}>
+                Habilitar respuestas
+              </Button>
+            </div>
+          )}
+          {connection.repliesEnabled && (
+            <Button variant="secondary" size="sm" isLoading={busy} onClick={() => update("POST")}>
+              Renovar autorización
+            </Button>
+          )}
+        </div>
       )}
       {connection?.username ? (
         confirmDisconnect ? (

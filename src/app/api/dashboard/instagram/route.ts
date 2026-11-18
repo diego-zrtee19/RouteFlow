@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { apiErrorResponse } from "@/lib/apiResponse";
 import { requireSeller } from "@/lib/authz";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { instagramReplyKey } from "@/services/instagramMessaging";
 import {
   createInstagramLogin,
   instagramConfig,
@@ -16,7 +17,7 @@ export async function GET() {
   try {
     const { data, error } = await getSupabaseAdmin()
       .from("seller_instagram_connections")
-      .select("username")
+      .select("username, token_config_id")
       .eq("seller_id", seller.value.id)
       .not("connected_at", "is", null)
       .maybeSingle();
@@ -24,6 +25,7 @@ export async function GET() {
     return NextResponse.json({
       available: Boolean(instagramConfig()),
       username: data?.username ?? null,
+      repliesEnabled: Boolean(data?.token_config_id && instagramReplyKey()),
     });
   } catch {
     return apiErrorResponse("INTERNAL_ERROR", "No se pudo consultar Instagram", 500);

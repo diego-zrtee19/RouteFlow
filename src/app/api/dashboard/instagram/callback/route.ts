@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSeller } from "@/lib/authz";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { encryptInstagramToken, instagramReplyKey } from "@/services/instagramMessaging";
 import {
   instagramAuthorizedAccount,
   instagramConfig,
@@ -44,6 +45,30 @@ export async function GET(request: NextRequest) {
     if (!account) return finish("select-one");
     const admin = getSupabaseAdmin();
 
+    const { data: existing, error: existingError } = await admin
+      .from("seller_instagram_connections")
+      .select("id, instagram_account_id, connected_at")
+      .eq("seller_id", seller.value.id)
+      .not("connected_at", "is", null)
+      .maybeSingle();
+    if (existingError) throw existingError;
+    if (existing) {
+      if (existing.instagram_account_id !== account.id) return finish("already-linked");
+      await subscribeInstagramMessages(account.id, account.token);
+      if (instagramReplyKey()) {
+        const { error: credentialError } = await admin
+          .from("seller_instagram_connections")
+          .update({
+            token_ciphertext: encryptInstagramToken(account.token, existing.id),
+            token_config_id: config.configId,
+          })
+          .eq("id", existing.id)
+          .eq("seller_id", seller.value.id);
+        if (credentialError) throw credentialError;
+      }
+      return finish("connected");
+    }
+
     // Discard an abandoned, unfinished attempt before reserving the account.
     const { error: cleanupError } = await admin
       .from("seller_instagram_connections")
@@ -69,7 +94,15 @@ export async function GET(request: NextRequest) {
       await subscribeInstagramMessages(account.id, account.token);
       const { data: active, error: activateError } = await admin
         .from("seller_instagram_connections")
-        .update({ connected_at: new Date().toISOString() })
+        .update({
+          connected_at: new Date().toISOString(),
+          ...(instagramReplyKey()
+            ? {
+                token_ciphertext: encryptInstagramToken(account.token, connection.id),
+                token_config_id: config.configId,
+              }
+            : {}),
+        })
         .eq("id", connection.id)
         .select("id")
         .maybeSingle();
