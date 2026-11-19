@@ -118,7 +118,7 @@ export function DeliveryArrangement({
         >
           {editable
             ? next
-            : "Este pedido ya no permite modificar la cita. Consulta el estado y las opciones de ayuda en el pedido."}
+            : "La cita no está disponible en el estado actual del pedido. Si el pago está pendiente, podrás acordarla cuando se confirme."}
         </p>
       )}
       {error && (

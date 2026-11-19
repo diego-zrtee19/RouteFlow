@@ -58,6 +58,7 @@ export function ConversationSales({
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<ConversationSale[]>([]);
   const [error, setError] = useState("");
+  const [inventoryError, setInventoryError] = useState("");
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -70,12 +71,29 @@ export function ConversationSales({
       if (inFlight || document.visibilityState === "hidden") return;
       inFlight = true;
       try {
-        const data = await json<{ sales: ConversationSale[] }>(`${endpoint}?sender=${sender}`, {
-          signal: controller.signal,
-        });
+        const [saleResult, inventoryResult] = await Promise.allSettled([
+          json<{ sales: ConversationSale[] }>(`${endpoint}?sender=${sender}`, {
+            signal: controller.signal,
+          }),
+          json<{ products: Product[] }>("/api/dashboard/catalog", {
+            signal: controller.signal,
+          }),
+        ]);
         if (!controller.signal.aborted) {
-          setSales(data.sales);
-          setError("");
+          if (saleResult.status === "fulfilled") {
+            setSales(saleResult.value.sales);
+            setError("");
+          } else {
+            setError("No se pudieron actualizar las compras. Inténtalo de nuevo.");
+          }
+          if (inventoryResult.status === "fulfilled") {
+            setProducts(inventoryResult.value.products);
+            setInventoryError("");
+          } else {
+            setInventoryError(
+              "No se pudo actualizar el inventario. Usa Actualizar antes de preparar otro enlace.",
+            );
+          }
         }
       } catch (failure) {
         if (!controller.signal.aborted)
@@ -88,14 +106,6 @@ export function ConversationSales({
       }
     }
     void load();
-    json<{ products: Product[] }>("/api/dashboard/catalog", { signal: controller.signal })
-      .then((data) => {
-        if (!controller.signal.aborted) setProducts(data.products);
-      })
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setError("No se pudo consultar el inventario. Usa Actualizar para intentarlo de nuevo.");
-      });
     const timer = window.setInterval(load, 15000);
     document.addEventListener("visibilitychange", load);
     return () => {
@@ -142,7 +152,7 @@ export function ConversationSales({
     updateDraft((current) => ({ quantities: { ...current.quantities, [key]: value } }));
   }
   async function prepare() {
-    if (busy || !selected.length || unavailable.length) return;
+    if (busy || inventoryError || !selected.length || unavailable.length) return;
     setBusy(true);
     setError("");
     setNotice("");
@@ -159,7 +169,8 @@ export function ConversationSales({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sender, items, clientId }),
       });
-      setNotice("Enlace preparado. Todavía no se ha enviado ni apartado inventario.");
+      setNotice("Enlace preparado. Consulta su estado en la tarjeta de la compra.");
+      updateDraft(() => ({ quantities: {} }));
       setRefresh((v) => v + 1);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "No se pudo preparar el enlace");
@@ -205,13 +216,25 @@ export function ConversationSales({
             Prepara el enlace, compártelo y vuelve aquí para ver el pago y la entrega.
           </p>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => setRefresh((v) => v + 1)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setNotice("");
+            setRefresh((v) => v + 1);
+          }}
+        >
           Actualizar
         </Button>
       </div>
       {error && (
         <p role="alert" className="text-sm text-rose-700">
           {error}
+        </p>
+      )}
+      {inventoryError && (
+        <p role="alert" className="text-sm text-rose-700">
+          {inventoryError}
         </p>
       )}
       {notice && (
@@ -313,6 +336,7 @@ export function ConversationSales({
             isLoading={busy}
             disabled={
               !selected.length ||
+              !!inventoryError ||
               unavailable.length > 0 ||
               selected.length > 20 ||
               selected.reduce((sum, p) => sum + draft.quantities[p.key], 0) > 50
