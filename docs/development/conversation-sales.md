@@ -26,3 +26,11 @@ La bandeja `/dashboard/messages` permite preparar una compra para una conversaci
 `tests/conversation-sale.test.ts` verifica aislamiento, manipulación de selecciones, enlaces inactivos, datos públicos mínimos y estados del recorrido. `tests/sql/conversation-sales.sql` ejecuta una prueba de desarrollo con fixtures revertidos al terminar: ocultación del catálogo, selección/precio inmutables, asociación, inventario y reintentos. No realiza cobros ni valida demanda comercial.
 
 Después del despliegue se debe comprobar la preparación desde la bandeja, el checkout público, la confirmación de pago TEST y el acceso a despacho. Las credenciales y proveedores LIVE permanecen fuera de este cambio. La política y ventana de mensajes de Meta siguen aplicándose al compartir enlaces por Instagram.
+
+### Revisión del 19 de noviembre de 2026
+
+- Compilación de Preview, lint, tipos y 317 pruebas correctos. La prueba SQL en desarrollo confirmó reserva atómica, precio/selección inmutables y protección frente a reintentos; sus fixtures se revirtieron.
+- En el navegador se preparó una compra desde una conversación existente con un artículo temporal, oculto del catálogo. Prepararla mantuvo tres unidades; iniciar Stripe TEST reservó una y creó un único pedido asociado, correctamente mostrado como pago pendiente.
+- Se comprobó el acceso al pedido y el regreso a la conversación. Se ajustó el inventario para refrescarse junto con sus compras y la vista de chat para evitar columnas estrechas en pantallas medianas.
+- **Pendiente:** completar ese pago en el formulario seguro de Stripe y comprobar la transición por webhook a pagado. El navegador automatizado no pudo escribir en los campos integrados; no se sustituyó la confirmación de Stripe por una actualización manual de la base.
+- No se envió un nuevo mensaje comercial de Instagram ni se activaron proveedores LIVE. El artículo temporal y el intento TEST se conservan mientras se completa la revisión; después se debe desactivar el artículo y conservar la evidencia del pedido según su estado.

@@ -491,7 +491,7 @@ function Inbox() {
       ) : (
         <div className="flex overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
           <aside
-            className={`${selected ? "hidden md:block" : "block"} w-full shrink-0 border-r border-line md:w-72`}
+            className={`${selected ? "hidden xl:block" : "block"} w-full shrink-0 border-r border-line xl:w-72`}
             aria-label="Conversaciones"
           >
             <div className="p-4">
@@ -556,7 +556,7 @@ function Inbox() {
               }
             />
           ) : (
-            <div className="hidden min-h-96 flex-1 items-center justify-center p-8 text-center md:flex">
+            <div className="hidden min-h-96 flex-1 items-center justify-center p-8 text-center xl:flex">
               <div>
                 <MessageCircle size={36} className="mx-auto text-accent-700" aria-hidden />
                 <h2 className="mt-4 font-semibold text-ink">Cada conversación, en su lugar</h2>
