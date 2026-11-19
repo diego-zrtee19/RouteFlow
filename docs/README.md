@@ -30,7 +30,7 @@ La presencia de una guía no demuestra que la cuenta correspondiente esté confi
 
 - [Objetivo y secuencia acordados con Diego](product/PROJECT_BRIEF.md).
 - [Identidad de marca: azul profundo y blanco](brand/identity-v1.md).
-- [Página interactiva para presentar el proyecto](../output/presentation-v1/README.md).
+- [Página interactiva para presentar el proyecto](product/presentation-hub.md).
 - [Venta rápida y catálogo](catalog-sales.md).
 - [Piloto de los tres recorridos](three-journeys-pilot-2026-10-22.md).
 - [Decisión pendiente de proveedor de pago](product/PAYMENT_PROVIDER_PENDING.md).
