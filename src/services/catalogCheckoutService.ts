@@ -17,6 +17,10 @@ import { rowToOrder, cancelOrder } from "@/repositories/orderRepository";
 import { upsertPayment } from "@/repositories/paymentRepository";
 import { recordEvent } from "@/services/orderService";
 import { FedExShippingProvider } from "@/providers/shipping/FedExProvider";
+import {
+  resolveConversationSelection,
+  type ConversationSaleSelection,
+} from "@/services/conversationSaleService";
 import type { Address, DeliveryMethod } from "@/domain/types";
 
 export interface CartProfile {
@@ -43,7 +47,7 @@ export interface CartProfile {
     line_total: number;
   }[];
 }
-export function validateCatalogSelection(body: Record<string, unknown>) {
+export function validateCatalogSelection(body: Record<string, unknown>): ConversationSaleSelection {
   const username = typeof body.username === "string" ? body.username.trim().toLowerCase() : "";
   if (!/^[a-z0-9_]{1,24}$/.test(username))
     throw new CheckoutError("invalid_catalog", 400, "Catálogo inválido");
@@ -61,12 +65,18 @@ export async function loadCartProfile(
   username: string,
   items: CartLine[],
   delivery?: DeliveryMethod,
+  saleId?: string,
+  allowHidden = false,
 ): Promise<CartProfile> {
-  const { data, error } = await getSupabaseAdmin().rpc("catalog_cart_profile", {
-    p_username: username,
-    p_items: items,
-    p_delivery: delivery ?? null,
-  });
+  const { data, error } = await getSupabaseAdmin().rpc(
+    saleId || allowHidden ? "commerce_cart_profile" : "catalog_cart_profile",
+    {
+      p_username: username,
+      p_items: items,
+      p_delivery: delivery ?? null,
+      ...(saleId || allowHidden ? { p_allow_hidden: true, p_sale_id: saleId ?? null } : {}),
+    },
+  );
   if (error || !data)
     throw new CheckoutError("cart_unavailable", 409, error?.message ?? "Actualiza el carrito");
   return data as CartProfile;
@@ -105,7 +115,8 @@ export async function diagnoseCatalogCart(username: string, items: CartLine[]) {
   return inventoryCartIssues(products.data ?? [], items);
 }
 export async function quoteCatalogCart(body: Record<string, unknown>) {
-  const { username, items } = validateCatalogSelection(body);
+  const selection = (await resolveConversationSelection(body)) ?? validateCatalogSelection(body);
+  const { username, items } = selection;
   const address = body.address as {
     postalCode?: string;
     country?: string;
@@ -119,7 +130,12 @@ export async function quoteCatalogCart(body: Record<string, unknown>) {
     !/^[A-Za-z]{2}$/.test(address.country ?? "")
   )
     throw new CheckoutError("invalid_address", 400, "Completa el código postal y país");
-  const profile = await loadCartProfile(username, items, "shipping");
+  const profile = await loadCartProfile(
+    username,
+    items,
+    "shipping",
+    "conversationSaleId" in selection ? selection.conversationSaleId : undefined,
+  );
   if (profile.shippingPayer === "seller") return { payer: "seller", quotes: [] };
   const rates = await new FedExShippingProvider().getRates({
     origin: profile.shippingProfile.origin,
@@ -167,7 +183,7 @@ export async function createCatalogCheckout(
   attemptKey?: string | null,
 ) {
   if (!isStripeConfigured()) throw new CheckoutError("stripe_not_configured", 503);
-  const selection = validateCatalogSelection(body);
+  const selection = (await resolveConversationSelection(body)) ?? validateCatalogSelection(body);
   const input = validateCheckoutInput({ ...body, publicId: "CATALOG" });
   const attempt =
     attemptKey !== undefined
@@ -193,6 +209,7 @@ export async function createCatalogCheckout(
       selection.username,
       selection.items,
       input.deliveryMethod,
+      "conversationSaleId" in selection ? selection.conversationSaleId : undefined,
     );
     if (input.deliveryMethod === "shipping" && profile.shippingPayer === "buyer") {
       const { data: quote, error } = await getSupabaseAdmin()
@@ -224,22 +241,31 @@ export async function createCatalogCheckout(
       ...input,
       username: selection.username,
       items: selection.items,
+      ...("conversationSaleId" in selection
+        ? { conversationSaleId: selection.conversationSaleId }
+        : {}),
       address: { ...input.address, fullName: input.buyerName, phone: input.buyerPhone },
     };
     if (attempt) order = await reserveCheckoutAttempt(attempt, reservation);
     else {
-      const { data, error } = await getSupabaseAdmin().rpc("reserve_catalog_purchase", {
-        p_username: selection.username,
-        p_items: selection.items,
-        p_order_number: generateOrderNumber(),
-        p_token_hash: hashBuyerToken(buyerToken),
-        p_buyer_name: input.buyerName,
-        p_buyer_email: input.buyerEmail,
-        p_buyer_phone: input.buyerPhone,
-        p_address: { ...input.address, fullName: input.buyerName, phone: input.buyerPhone },
-        p_delivery: input.deliveryMethod,
-        p_quote_id: input.quoteId ?? null,
-      });
+      const { data, error } = await getSupabaseAdmin().rpc(
+        "conversationSaleId" in selection
+          ? "reserve_conversation_purchase"
+          : "reserve_catalog_purchase",
+        {
+          p_username: selection.username,
+          p_items: selection.items,
+          p_order_number: generateOrderNumber(),
+          p_token_hash: hashBuyerToken(buyerToken),
+          p_buyer_name: input.buyerName,
+          p_buyer_email: input.buyerEmail,
+          p_buyer_phone: input.buyerPhone,
+          p_address: { ...input.address, fullName: input.buyerName, phone: input.buyerPhone },
+          p_delivery: input.deliveryMethod,
+          p_quote_id: input.quoteId ?? null,
+          ...("conversationSaleId" in selection ? { p_sale_id: selection.conversationSaleId } : {}),
+        },
+      );
       if (error || !data)
         throw new CheckoutError("cart_unavailable", 409, error?.message ?? "Actualiza el carrito");
       order = rowToOrder(data);
@@ -284,7 +310,10 @@ export async function createCatalogCheckout(
           : []),
       ],
       success_url: `${origin}/checkout/success?order_id=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/catalogo/${selection.username}/checkout?payment=cancelled&order_id=${order.id}`,
+      cancel_url:
+        typeof body.salePublicId === "string"
+          ? `${origin}/comprar/${body.salePublicId}?payment=cancelled&order_id=${order.id}`
+          : `${origin}/catalogo/${selection.username}/checkout?payment=cancelled&order_id=${order.id}`,
     };
     session = await getStripe().checkout.sessions.create(
       attempt ? await bindStripeRequest(attempt, request) : request,

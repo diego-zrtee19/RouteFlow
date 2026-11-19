@@ -149,6 +149,11 @@ export default function OrderDetailPage() {
   const params = useParams();
   const { t } = useI18n();
   const orderId = params?.id as string;
+  const [conversationSender, setConversationSender] = useState("");
+  useEffect(() => {
+    const sender = new URL(window.location.href).searchParams.get("instagram");
+    setConversationSender(sender && /^\d{1,32}$/.test(sender) ? sender : "");
+  }, [orderId]);
 
   // Read the order from the server. `null` means "not loaded yet"; the loading
   // flag below distinguishes that from "not found".
@@ -329,8 +334,16 @@ export default function OrderDetailPage() {
     <DashboardLayout>
       <div className="mx-auto max-w-6xl space-y-6 pb-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <Link href="/dashboard/orders" className={buttonStyles({ variant: "ghost", size: "sm" })}>
-            <ArrowLeft className="w-4 h-4 mr-1" /> {t("dashboard.order.backToOrders")}
+          <Link
+            href={
+              conversationSender
+                ? `/dashboard/messages?sender=${conversationSender}`
+                : "/dashboard/orders"
+            }
+            className={buttonStyles({ variant: "ghost", size: "sm" })}
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />{" "}
+            {conversationSender ? "Volver a la conversación" : t("dashboard.order.backToOrders")}
           </Link>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-semibold tracking-tight text-ink">{order.orderNumber}</h1>

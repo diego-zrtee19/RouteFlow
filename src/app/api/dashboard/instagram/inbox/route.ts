@@ -128,7 +128,10 @@ export async function POST(request: Request) {
     body.text.trim().length > 1000 ||
     body.text.includes("\0") ||
     typeof body.clientId !== "string" ||
-    !/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(body.clientId)
+    !/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(body.clientId) ||
+    (body.saleId !== undefined &&
+      (typeof body.saleId !== "string" ||
+        !/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(body.saleId)))
   ) {
     return apiErrorResponse(
       "VALIDATION_ERROR",
@@ -148,13 +151,17 @@ export async function POST(request: Request) {
     const text = body.text.trim();
     const { data: previous, error: previousError } = await admin
       .from("seller_instagram_replies")
-      .select("recipient_id,message_text,status")
+      .select("recipient_id,message_text,status,sale_id")
       .eq("connection_id", connection.id)
       .eq("client_id", body.clientId)
       .maybeSingle();
     if (previousError) throw previousError;
     if (previous) {
-      if (previous.recipient_id !== body.senderId || previous.message_text !== text)
+      if (
+        previous.recipient_id !== body.senderId ||
+        previous.message_text !== text ||
+        (previous.sale_id ?? null) !== (body.saleId ?? null)
+      )
         return apiErrorResponse(
           "VALIDATION_ERROR",
           "Esta solicitud ya pertenece a otro mensaje",
@@ -164,6 +171,33 @@ export async function POST(request: Request) {
         { status: previous.status, duplicate: true },
         { headers: privateHeaders },
       );
+    }
+    if (body.saleId) {
+      const sale = await admin
+        .from("instagram_conversation_sales")
+        .select("public_id,cancelled_at,expires_at,order_id")
+        .eq("id", body.saleId)
+        .eq("seller_id", seller.value.id)
+        .eq("connection_id", connection.id)
+        .eq("sender_id", body.senderId)
+        .maybeSingle();
+      if (sale.error) throw sale.error;
+      const origin = (process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin).replace(
+        /\/$/,
+        "",
+      );
+      if (
+        !sale.data ||
+        sale.data.cancelled_at ||
+        sale.data.order_id ||
+        Date.parse(sale.data.expires_at) <= Date.now() ||
+        !text.includes(`${origin}/comprar/${sale.data.public_id}`)
+      )
+        return apiErrorResponse(
+          "VALIDATION_ERROR",
+          "Prepara un enlace válido para esta conversación e inclúyelo en la respuesta",
+          409,
+        );
     }
     const { data: latest, error: latestError } = await admin
       .from("seller_instagram_messages")
@@ -195,6 +229,7 @@ export async function POST(request: Request) {
       client_id: body.clientId,
       recipient_id: body.senderId,
       message_text: text,
+      ...(body.saleId ? { sale_id: body.saleId } : {}),
     });
     if (reserveError?.code === "23505")
       return NextResponse.json({ status: "pending", duplicate: true }, { headers: privateHeaders });

@@ -7,6 +7,11 @@ import { ArrowLeft, MessageCircle, RefreshCw, Send } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Button, buttonStyles } from "@/components/ui/Button";
 import type { InstagramInbox, InstagramMessage, InstagramThread } from "@/domain/instagramInbox";
+import {
+  ConversationSales,
+  emptySaleDraft,
+  type ConversationSaleDraft,
+} from "@/components/dashboard/ConversationSales";
 
 const endpoint = "/api/dashboard/instagram/inbox";
 const date = (value: string) =>
@@ -31,7 +36,13 @@ type Conversation = {
   replyAllowed: boolean;
   lastIncomingAt: string | null;
 };
-type Composer = { draft: string; attempt: { id: string; text: string } | null; uncertain: boolean };
+type Composer = {
+  draft: string;
+  attempt: { id: string; text: string } | null;
+  uncertain: boolean;
+  saleId?: string;
+  saleDraft?: ConversationSaleDraft;
+};
 const emptyComposer: Composer = { draft: "", attempt: null, uncertain: false };
 function Thread({
   sender,
@@ -148,11 +159,17 @@ function Thread({
       const result = await json<{ status: string }>(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ senderId: sender, text: request.text, clientId: request.id }),
+        body: JSON.stringify({
+          senderId: sender,
+          text: request.text,
+          clientId: request.id,
+          ...(composer.saleId ? { saleId: composer.saleId } : {}),
+        }),
       });
       if (result.status === "sent") {
         setDraft("");
         setAttempt(null);
+        updateComposer((current) => ({ ...current, saleId: undefined }));
         setNotice("Mensaje enviado a Instagram.");
       } else {
         setUncertain(true);
@@ -303,6 +320,30 @@ function Thread({
           </form>
         )}
       </div>
+      <ConversationSales
+        composeDisabled={busy || uncertain || !repliesEnabled || !conversation?.replyAllowed}
+        sender={sender}
+        draft={composer.saleDraft ?? emptySaleDraft}
+        updateDraft={(change) =>
+          updateComposer((current) => ({
+            ...current,
+            saleDraft: change(current.saleDraft ?? emptySaleDraft),
+          }))
+        }
+        onCompose={(sale) => {
+          updateComposer((current) => ({
+            ...current,
+            draft: current.draft.includes(sale.url)
+              ? current.draft
+              : current.draft.trim()
+                ? `${current.draft}\n\n${sale.url}`
+                : `Hola, aquí está el enlace para completar tu compra de forma segura:\n${sale.url}`,
+            attempt: null,
+            saleId: sale.id,
+          }));
+          document.getElementById("instagram-reply")?.focus();
+        }}
+      />
     </section>
   );
 }
@@ -315,6 +356,17 @@ function Inbox() {
   const [query, setQuery] = useState("");
   const [refresh, setRefresh] = useState(0);
   const [moreBusy, setMoreBusy] = useState(false);
+  useEffect(() => {
+    const sender = new URL(window.location.href).searchParams.get("sender");
+    if (sender && /^\d{1,32}$/.test(sender)) setSelected(sender);
+  }, []);
+  function choose(sender: string | null) {
+    setSelected(sender);
+    const url = new URL(window.location.href);
+    if (sender) url.searchParams.set("sender", sender);
+    else url.searchParams.delete("sender");
+    window.history.replaceState(null, "", url);
+  }
   useEffect(() => {
     const controller = new AbortController();
     let loading = false;
@@ -458,7 +510,7 @@ function Inbox() {
               {threads.map((thread) => (
                 <button
                   key={thread.sender_id}
-                  onClick={() => setSelected(thread.sender_id)}
+                  onClick={() => choose(thread.sender_id)}
                   aria-pressed={selected === thread.sender_id}
                   className={`block w-full border-t border-line px-4 py-4 text-left hover:bg-accent-50 focus-visible:outline-2 focus-visible:outline-accent-700 ${selected === thread.sender_id ? "bg-accent-50" : ""}`}
                 >
@@ -494,7 +546,7 @@ function Inbox() {
               key={selected}
               sender={selected}
               repliesEnabled={inbox.repliesEnabled}
-              onBack={() => setSelected(null)}
+              onBack={() => choose(null)}
               composer={composers[selected] ?? emptyComposer}
               updateComposer={(update) =>
                 setComposers((current) => ({
