@@ -32,5 +32,16 @@ Después del despliegue se debe comprobar la preparación desde la bandeja, el c
 - Compilación de Preview, lint, tipos y 317 pruebas correctos. La prueba SQL en desarrollo confirmó reserva atómica, precio/selección inmutables y protección frente a reintentos; sus fixtures se revirtieron.
 - En el navegador se preparó una compra desde una conversación existente con un artículo temporal, oculto del catálogo. Prepararla mantuvo tres unidades; iniciar Stripe TEST reservó una y creó un único pedido asociado, correctamente mostrado como pago pendiente.
 - Se comprobó el acceso al pedido y el regreso a la conversación. Se ajustó el inventario para refrescarse junto con sus compras y la vista de chat para evitar columnas estrechas en pantallas medianas.
-- **Pendiente:** completar ese pago en el formulario seguro de Stripe y comprobar la transición por webhook a pagado. El navegador automatizado no pudo escribir en los campos integrados; no se sustituyó la confirmación de Stripe por una actualización manual de la base.
-- No se envió un nuevo mensaje comercial de Instagram ni se activaron proveedores LIVE. El artículo temporal y el intento TEST se conservan mientras se completa la revisión; después se debe desactivar el artículo y conservar la evidencia del pedido según su estado.
+- En esa revisión quedó pendiente completar el pago: el navegador no pudo escribir en los campos integrados. Ese intento venció y se canceló, restituyendo las existencias. La prueba posterior del 20 de noviembre resolvió este pendiente mediante un enlace nuevo.
+- No se envió un nuevo mensaje comercial de Instagram ni se activaron proveedores LIVE.
+
+### Cierre de pago y entrega — 20 y 21 de noviembre de 2026
+
+- Se pagó una compra nueva de $100 MXN en Stripe TEST con tarjeta ficticia. El evento automático `checkout.session.completed` quedó `PROCESSED`, el pago `SUCCEEDED` y el pedido `PAID`, con un solo pago y existencias de tres a dos.
+- La revisión de entrega detectó que el comprador con acceso por sesión de Stripe veía el recibo, pero no podía consultar el acuerdo. `DeliveryArrangement` ahora envía esa credencial en un encabezado privado y la API verifica con Stripe su vínculo al pedido. Las escrituras requieren el mismo origen, también para el vendedor.
+- Se propuso una cita de demostración desde el vendedor y se confirmó desde el comprador sin crear una cuenta. La cita quedó `CONFIRMED`, revisión 2.
+- Un NIP incorrecto fue rechazado sin completar la orden. El NIP correcto completó la entrega por la interfaz del vendedor. El seguimiento del comprador retiró el NIP activo y mostró `COMPLETED`; el panel y la conversación de Instagram mostraron el mismo cierre.
+- Repetir la operación devolvió `already_completed: true`. Después del reintento siguió existiendo un único evento `ORDER_COMPLETED`, un único pago y dos unidades. La prueba transaccional `tests/deliveryPin.postgres.sql` también pasó y revirtió sus fixtures.
+- Pasaron 323 pruebas, lint, tipos y la compilación de Preview. `tests/delivery-arrangement-access.test.ts` cubre acceso por sesión, sesión ajena, ausencia de credencial, confirmación, origen y precedencia del token.
+- El producto temporal quedó desactivado; los pedidos TEST se conservan como evidencia. No hubo entrega física, transferencias reales ni cambios en producción.
+- **Límite de Mis compras:** la sesión de Diego no mostró esta compra, asociada a un correo ficticio diferente, como corresponde. No se probó la recuperación del pedido mediante un buzón real de ese comprador. Esa prueba y el envío de un nuevo enlace comercial por Instagram siguen pendientes; la ventana de respuesta de Meta había vencido.
