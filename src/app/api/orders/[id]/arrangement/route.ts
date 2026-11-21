@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSeller } from "@/lib/authz";
-import { findOrderForBuyer, findOrderForSeller } from "@/services/orderService";
+import {
+  findOrderForBuyer,
+  findOrderForSeller,
+  findOrderByStripeSessionForBuyer,
+} from "@/services/orderService";
 import { findOrderForBuyerIdentity, sameOriginBuyerAction } from "@/lib/buyerIdentity";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { apiErrorResponse } from "@/lib/apiResponse";
 async function access(req: NextRequest, id: string) {
+  if (req.method !== "GET" && !sameOriginBuyerAction(req)) return null;
   if (req.headers.get("x-routeflow-audience") === "seller") {
     const seller = await requireSeller();
     return seller.ok
@@ -12,11 +17,12 @@ async function access(req: NextRequest, id: string) {
       : null;
   }
   const token = req.headers.get("x-buyer-token");
+  const session = req.headers.get("x-checkout-session-id");
   const order = token
     ? await findOrderForBuyer(id, token)
-    : req.method === "GET" || sameOriginBuyerAction(req)
-      ? await findOrderForBuyerIdentity(id)
-      : null;
+    : session
+      ? await findOrderByStripeSessionForBuyer(id, session)
+      : await findOrderForBuyerIdentity(id);
   return { order, actor: "buyer" };
 }
 const headers = { "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" };

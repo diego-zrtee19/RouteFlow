@@ -25,11 +25,13 @@ export function DeliveryArrangement({
   orderId,
   audience,
   token,
+  sessionId,
   editable,
 }: {
   orderId: string;
   audience: "seller" | "buyer";
   token?: string | null;
+  sessionId?: string | null;
   editable: boolean;
 }) {
   const [data, setData] = useState<{
@@ -43,13 +45,18 @@ export function DeliveryArrangement({
   const headers = {
     "x-routeflow-audience": audience,
     ...(token ? { "x-buyer-token": token } : {}),
+    ...(!token && sessionId ? { "x-checkout-session-id": sessionId } : {}),
   };
   useEffect(() => {
     const c = new AbortController();
     setData(null);
     fetch(`/api/orders/${orderId}/arrangement`, {
       cache: "no-store",
-      headers: { "x-routeflow-audience": audience, ...(token ? { "x-buyer-token": token } : {}) },
+      headers: {
+        "x-routeflow-audience": audience,
+        ...(token ? { "x-buyer-token": token } : {}),
+        ...(!token && sessionId ? { "x-checkout-session-id": sessionId } : {}),
+      },
       signal: c.signal,
     })
       .then(async (r) => {
@@ -64,7 +71,7 @@ export function DeliveryArrangement({
         if (!c.signal.aborted) setError(e.message);
       });
     return () => c.abort();
-  }, [orderId, audience, token, reload]);
+  }, [orderId, audience, token, sessionId, reload]);
   async function send(action: string) {
     if (busy || !data) return;
     setBusy(true);

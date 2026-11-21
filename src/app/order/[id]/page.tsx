@@ -271,6 +271,7 @@ export default function PublicOrderTrackingPage() {
             orderId={order.id}
             audience="buyer"
             token={buyerToken}
+            sessionId={sessionId}
             editable={["PAID", "READY_TO_SHIP"].includes(order.status)}
           />
         )}

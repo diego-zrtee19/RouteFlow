@@ -28,7 +28,7 @@ beforeEach(() => {
 function req(headers: Record<string, string>, body = { action: "confirm", version: 1 }) {
   return new NextRequest("http://localhost/api/orders/order/arrangement", {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...headers },
+    headers: { "Content-Type": "application/json", origin: "http://localhost", ...headers },
     body: JSON.stringify(body),
   });
 }
