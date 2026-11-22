@@ -44,4 +44,13 @@ Después del despliegue se debe comprobar la preparación desde la bandeja, el c
 - Repetir la operación devolvió `already_completed: true`. Después del reintento siguió existiendo un único evento `ORDER_COMPLETED`, un único pago y dos unidades. La prueba transaccional `tests/deliveryPin.postgres.sql` también pasó y revirtió sus fixtures.
 - Pasaron 323 pruebas, lint, tipos y la compilación de Preview. `tests/delivery-arrangement-access.test.ts` cubre acceso por sesión, sesión ajena, ausencia de credencial, confirmación, origen y precedencia del token.
 - El producto temporal quedó desactivado; los pedidos TEST se conservan como evidencia. No hubo entrega física, transferencias reales ni cambios en producción.
-- **Límite de Mis compras:** la sesión de Diego no mostró esta compra, asociada a un correo ficticio diferente, como corresponde. No se probó la recuperación del pedido mediante un buzón real de ese comprador. Esa prueba y el envío de un nuevo enlace comercial por Instagram siguen pendientes; la ventana de respuesta de Meta había vencido.
+- En esa prueba, Mis compras no mostró el pedido asociado a un correo ficticio diferente, como corresponde. La recuperación con correo real se verificó posteriormente, según el registro siguiente. El envío de un nuevo enlace comercial por Instagram sigue pendiente; la ventana de respuesta de Meta había vencido.
+
+### Recuperación por correo real — 21 de noviembre de 2026
+
+- Con autorización explícita, se realizó una nueva compra de $100 MXN en Stripe TEST usando el correo real verificado del titular. El pedido de demostración `RF-HFA7GP` quedó `PAID`, con un solo pago `SUCCEEDED` y un evento de checkout `PROCESSED`.
+- Se cerró la sesión y se accedió desde Mis compras, sin usar el enlace privado del recibo. El correo de verificación de Clerk llegó al buzón real. Un intento de acceso anterior dejó de estar vigente; se reinició el acceso y el código nuevo proporcionado por el titular permitió entrar.
+- Mis compras mostró únicamente la nueva compra correspondiente al correo verificado. Los pedidos de demostración asociados al correo ficticio no aparecieron en esa lista.
+- Desde la lista se abrió el pedido y se comprobaron recibo, pago, NIP, acuerdo de entrega y botón de ayuda. La URL no llevaba `session_id` de Stripe ni token de comprador.
+- El producto temporal volvió a quedar desactivado, con una unidad restante. Se conservan los registros TEST como evidencia. No se guardaron códigos de verificación en el repositorio, no hubo cargos reales y no se activó producción.
+- Esta verificación cubre acceso y recuperación mediante Clerk. No confirma la configuración de correo transaccional propia de RouteFlow ni su operación LIVE.
