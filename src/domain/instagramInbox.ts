@@ -4,7 +4,7 @@ export type InstagramMessage = {
   message_text: string;
   sent_at: string;
   direction: "incoming" | "outgoing";
-  status: "received" | "pending" | "sent" | "unknown";
+  status: "received" | "pending" | "sent" | "unknown" | "delivered" | "read" | "failed";
 };
 export type InstagramInbox = {
   username: string | null;

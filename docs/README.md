@@ -18,6 +18,8 @@ Entrada vigente para mantener el MVP. El [README principal](../README.md) descri
 
 ## Operación e integraciones
 
+- [WhatsApp e Instagram: bandeja y ventas](development/whatsapp.md).
+
 - [Preparación de producción](operations/PRODUCTION_READINESS.md).
 - [Activación de proveedores](operations/PROVIDERS_ACTIVATION.md).
 - [Procesos y alojamiento](operations/OPERATIONS_HOSTING.md).

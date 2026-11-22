@@ -2,6 +2,7 @@
 
 import { ConnectSetup } from "@/components/dashboard/ConnectSetup";
 import { InstagramConnection } from "@/components/dashboard/InstagramConnection";
+import { WhatsAppConnection } from "@/components/dashboard/WhatsAppConnection";
 import React, { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { Card } from "@/components/ui/Card";
@@ -112,6 +113,7 @@ export default function SettingsPage() {
       <div className="max-w-2xl space-y-6">
         <ConnectSetup />
         <InstagramConnection />
+        <WhatsAppConnection />
         <div>
           <h1 className="text-2xl font-semibold text-ink">{t("dashboard.settings.title")}</h1>
           <p className="text-sm text-slate-500">{t("dashboard.settings.subtitle")}</p>

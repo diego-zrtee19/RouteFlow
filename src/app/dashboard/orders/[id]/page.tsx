@@ -150,9 +150,21 @@ export default function OrderDetailPage() {
   const { t } = useI18n();
   const orderId = params?.id as string;
   const [conversationSender, setConversationSender] = useState("");
+  const [conversationChannel, setConversationChannel] = useState("instagram");
   useEffect(() => {
-    const sender = new URL(window.location.href).searchParams.get("instagram");
-    setConversationSender(sender && /^\d{1,32}$/.test(sender) ? sender : "");
+    const query = new URL(window.location.href).searchParams;
+    const channel = query.get("channel") === "whatsapp" ? "whatsapp" : "instagram";
+    const sender = query.get("instagram");
+    setConversationChannel(channel);
+    setConversationSender(
+      sender &&
+        (channel === "whatsapp"
+          ? /^(?:\d{6,20}|[A-Z]{2}\.(?:ENT\.)?[a-zA-Z0-9]{1,128})$/
+          : /^\d{1,32}$/
+        ).test(sender)
+        ? sender
+        : "",
+    );
   }, [orderId]);
 
   // Read the order from the server. `null` means "not loaded yet"; the loading
@@ -337,7 +349,7 @@ export default function OrderDetailPage() {
           <Link
             href={
               conversationSender
-                ? `/dashboard/messages?sender=${conversationSender}`
+                ? `/dashboard/messages?sender=${encodeURIComponent(conversationSender)}${conversationChannel === "whatsapp" ? "&channel=whatsapp" : ""}`
                 : "/dashboard/orders"
             }
             className={buttonStyles({ variant: "ghost", size: "sm" })}

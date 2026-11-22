@@ -34,7 +34,6 @@ export type ConversationSaleDraft = { quantities: Record<string, number>; client
 export const emptySaleDraft: ConversationSaleDraft = { quantities: {} };
 const money = (amount: number, currency: string) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency }).format(amount);
-const endpoint = "/api/dashboard/instagram/sales";
 async function json<T>(url: string, options?: RequestInit): Promise<T> {
   const response = await fetch(url, { cache: "no-store", ...options });
   const data = await response.json();
@@ -43,18 +42,21 @@ async function json<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export function ConversationSales({
+  channel = "instagram",
   sender,
   draft,
   updateDraft,
   onCompose,
   composeDisabled = false,
 }: {
+  channel?: "instagram" | "whatsapp";
   sender: string;
   draft: ConversationSaleDraft;
   updateDraft: (change: (current: ConversationSaleDraft) => ConversationSaleDraft) => void;
   onCompose: (sale: ConversationSale) => void;
   composeDisabled?: boolean;
 }) {
+  const endpoint = `/api/dashboard/${channel}/sales`;
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<ConversationSale[]>([]);
   const [error, setError] = useState("");
@@ -113,7 +115,7 @@ export function ConversationSales({
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", load);
     };
-  }, [sender, refresh]);
+  }, [sender, refresh, endpoint]);
   const options = products
     .filter((p) => p.isActive)
     .flatMap<ProductOption>((p) =>
@@ -400,7 +402,7 @@ export function ConversationSales({
                   <p className="text-sm">Rastreo: {sale.order.trackingNumber}</p>
                 )}
                 <Link
-                  href={`/dashboard/orders/${sale.order.id}?instagram=${sender}`}
+                  href={`/dashboard/orders/${sale.order.id}?instagram=${encodeURIComponent(sender)}${channel === "whatsapp" ? "&channel=whatsapp" : ""}`}
                   className={buttonStyles({ size: "sm" })}
                 >
                   {progress.action}
