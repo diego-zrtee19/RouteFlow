@@ -39,3 +39,16 @@ El asesor de seguridad solo informa RLS sin políticas en estas tablas: es inten
 Pendiente para la prueba completa: número TEST autorizado, credencial privada, webhook de Meta configurado y una conversación real consentida. No activar LIVE por esta guía.
 
 Referencias oficiales: [Embedded Signup](https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/implementation), [v4](https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/version-4), [coexistencia](https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users), [BSUID](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids).
+
+## Estado de vinculación — 22 de noviembre de 2026
+
+- Preview verificado del código: `f615234` (READY). Build, 335 pruebas y SQL de Instagram/WhatsApp pasaron.
+- Meta creó `Test Messaging Account` (WABA `1132194213134172`), número TEST `+1 (555) 192-8765`, phone ID `1532308693290006`.
+- Diego aceptó Platform/Cloud API y después Meta Business Tools. La autorización seleccionó solo esa cuenta actual, excluyendo cuentas futuras y números personales.
+- Autorizó guardar su credencial TEST únicamente en Vercel Preview y cifrada en Supabase DEV, ligada a su vendedor. No autorizó un envío real concreto de WhatsApp todavía.
+- Vercel tiene, solo en la rama Preview autorizada, IDs de WABA/teléfono/vendedor, allowlist de ese teléfono y LIVE=false. Se verificó el inventario de nombres y alcance sin leer valores secretos.
+- `WHATSAPP_TEST_ACCESS_TOKEN` y `WHATSAPP_WEBHOOK_VERIFY_TOKEN` se guardaron como Secret exclusivamente en la rama Vercel Preview autorizada mediante su formulario privado. Se verificaron los nombres, tipo y alcance sin revelar valores. **Todavía falta configurar/verificar el webhook, volver a desplegar y conectar el número desde la sesión del vendedor.** No presentar el número como vinculado a RouteFlow ni la recepción como validada.
+- La credencial temporal se trasladó directamente de Meta al formulario privado de Vercel. Una transferencia que devolvía el secreto al contexto de herramientas fue rechazada por revisión automática; no repetirla. Usar transferencia directa al formulario privado sin imprimir valores. El transporte temporal cifrado fue eliminado; no hay archivo de credencial en el repositorio.
+- El control de navegador dejó de responder a `service_info` y al inventario, también después de reiniciar el cliente de control. La aplicación Windows figura respondiendo. Un conteo sin contenido privado en cuatro logs recientes no encontró los cinco errores conocidos consultados: no hay causa raíz confirmada.
+- El control del navegador volvió a responder al retomar. No se borraron perfiles/cookies ni se cambiaron permisos globales. No hay corrección permanente confirmada del bloqueo. Las autorizaciones anteriores siguen válidas dentro del mismo alcance.
+- Guía oficial de recuperación de estados bloqueados: https://learn.chatgpt.com/docs/reference/troubleshooting
