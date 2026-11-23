@@ -160,6 +160,18 @@ it("routes to the signed webhook phone when available without changing the BSUID
   await sendWhatsAppText("456", "MX.abc123", "Hola", "private-token", "client-id", "invalid");
   expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({ recipient: "MX.abc123" });
 });
+it("matches the verified Mexican TEST number without rewriting LIVE provider addresses", async () => {
+  const fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ messages: [{ id: "wamid.mx" }] }),
+  });
+  vi.stubGlobal("fetch", fetch);
+  await sendWhatsAppText("456", "MX.abc123", "Hola", "token", "test", "5213300000000");
+  expect(JSON.parse(fetch.mock.calls[0][1].body).to).toBe("523300000000");
+  vi.stubEnv("WHATSAPP_LIVE_ENABLED", "true");
+  await sendWhatsAppText("456", "MX.abc123", "Hola", "token", "live", "5213300000000");
+  expect(JSON.parse(fetch.mock.calls[1][1].body).to).toBe("5213300000000");
+});
 it("checks token issuer and granted assets before accepting the phone", async () => {
   vi.stubGlobal(
     "fetch",

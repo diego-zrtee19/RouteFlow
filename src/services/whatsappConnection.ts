@@ -209,6 +209,16 @@ export async function sendWhatsAppText(
 ) {
   if (!whatsappPhoneAllowed(phoneId) || !whatsappSenderPattern.test(sender))
     throw Error("WhatsApp phone not enabled");
+  // Meta's TEST recipient list uses the verified +52 national number, while
+  // incoming Mexican wa_ids may retain the legacy mobile digit. Keep the
+  // canonical identity and stored provider value; adapt only this TEST transport.
+  const phone =
+    process.env.WHATSAPP_LIVE_ENABLED !== "true" &&
+    sender.startsWith("MX.") &&
+    senderPhone &&
+    /^521\d{10}$/.test(senderPhone)
+      ? "52" + senderPhone.slice(3)
+      : senderPhone;
   const result = await whatsappGraph<{ messages?: { id?: string }[] }>(
     `${phoneId}/messages`,
     token,
@@ -218,8 +228,8 @@ export async function sendWhatsAppText(
       body: JSON.stringify({
         messaging_product: "whatsapp",
         recipient_type: "individual",
-        ...(senderPhone && /^\d{6,20}$/.test(senderPhone)
-          ? { to: senderPhone }
+        ...(phone && /^\d{6,20}$/.test(phone)
+          ? { to: phone }
           : sender.includes(".")
             ? { recipient: sender }
             : { to: sender }),
