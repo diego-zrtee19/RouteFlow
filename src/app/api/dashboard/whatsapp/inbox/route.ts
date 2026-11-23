@@ -213,7 +213,7 @@ export async function POST(request: Request) {
     }
     const { data: latest, error: latestError } = await admin
       .from("seller_whatsapp_messages")
-      .select("sent_at")
+      .select("sent_at,sender_phone")
       .eq("connection_id", connection.id)
       .eq("sender_id", body.senderId)
       .order("sent_at", { ascending: false })
@@ -253,6 +253,7 @@ export async function POST(request: Request) {
         text,
         token,
         body.clientId,
+        latest.sender_phone,
       );
       const { error } = await admin
         .from("seller_whatsapp_replies")

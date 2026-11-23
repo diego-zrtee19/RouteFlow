@@ -42,8 +42,11 @@ BEGIN
  PERFORM public.save_seller_whatsapp_webhook(jsonb_build_array(jsonb_build_object('waba_id',c.waba_id,'phone_number_id',c.phone_number_id,'message_id','wamid.incoming','sender_id','MX.fixture','message_text','Hola','sent_at',now()-interval '30 seconds')), '[]'::jsonb);
  PERFORM public.save_seller_whatsapp_webhook(jsonb_build_array(jsonb_build_object('waba_id',c.waba_id,'phone_number_id',c.phone_number_id,'message_id','wamid.incoming','sender_id','MX.fixture','message_text','Hola','sent_at',now()-interval '30 seconds')), '[]'::jsonb);
  IF (SELECT count(*) FROM public.seller_whatsapp_messages WHERE connection_id=c.id)<>1 THEN RAISE EXCEPTION 'Duplicate incoming message'; END IF;
+ PERFORM public.save_seller_whatsapp_webhook(jsonb_build_array(jsonb_build_object('waba_id',c.waba_id,'phone_number_id',c.phone_number_id,'message_id','wamid.phone','sender_id','MX.phone','sender_phone','523300000000','message_text','Phone fixture','sent_at',now())), '[]'::jsonb);
+ IF NOT EXISTS(SELECT 1 FROM public.seller_whatsapp_messages WHERE connection_id=c.id AND sender_id='MX.phone' AND sender_phone='523300000000') THEN RAISE EXCEPTION 'Signed phone association missing'; END IF;
+ IF EXISTS(SELECT 1 FROM public.whatsapp_inbox_messages(c.id,'MX.fixture') WHERE message_text='Phone fixture') THEN RAISE EXCEPTION 'Cross-thread phone message leak'; END IF;
  PERFORM public.save_seller_whatsapp_webhook(jsonb_build_array(jsonb_build_object('waba_id','999','phone_number_id',c.phone_number_id,'message_id','wamid.wrong','sender_id','MX.fixture','message_text','Ignore','sent_at',now())), '[]'::jsonb);
- IF (SELECT count(*) FROM public.seller_whatsapp_messages WHERE connection_id=c.id)<>1 THEN RAISE EXCEPTION 'Wrong WABA accepted'; END IF;
+ IF (SELECT count(*) FROM public.seller_whatsapp_messages WHERE connection_id=c.id)<>2 THEN RAISE EXCEPTION 'Wrong WABA accepted'; END IF;
  IF (SELECT count(*) FROM public.whatsapp_inbox_threads(gen_random_uuid()))<>0 THEN RAISE EXCEPTION 'Cross-connection leak'; END IF;
  INSERT INTO public.seller_whatsapp_replies(connection_id,client_id,recipient_id,message_text,status,sale_id)
  VALUES(c.id,'00000000-0000-4000-8000-000000000001','MX.fixture','Test link','unknown',sale);
@@ -53,8 +56,9 @@ BEGIN
  IF (SELECT count(*) FROM public.whatsapp_inbox_messages(c.id,'MX.fixture'))<>2 THEN RAISE EXCEPTION 'History merge failed'; END IF;
  UPDATE public.seller_whatsapp_connections SET connected_at=NULL WHERE id=c.id;
  PERFORM public.save_seller_whatsapp_webhook(jsonb_build_array(jsonb_build_object('waba_id',c.waba_id,'phone_number_id',c.phone_number_id,'message_id','wamid.after-disconnect','sender_id','MX.fixture','message_text','Ignore','sent_at',now())), '[]'::jsonb);
- IF (SELECT count(*) FROM public.seller_whatsapp_messages WHERE connection_id=c.id)<>1 THEN RAISE EXCEPTION 'Disconnected ingestion accepted'; END IF;
+ IF (SELECT count(*) FROM public.seller_whatsapp_messages WHERE connection_id=c.id)<>2 THEN RAISE EXCEPTION 'Disconnected ingestion accepted'; END IF;
  IF has_table_privilege('authenticated','public.seller_whatsapp_messages','SELECT') OR has_function_privilege('anon','public.whatsapp_inbox_threads(uuid,timestamp with time zone,text)','EXECUTE') THEN RAISE EXCEPTION 'Private WhatsApp data publicly accessible'; END IF;
 END $$;
 SELECT 'PASS: WhatsApp isolation, duplicate delivery, status recovery, private history and atomic checkout' AS verification;
 ROLLBACK;
+

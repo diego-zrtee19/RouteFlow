@@ -71,6 +71,12 @@ it("accepts phone and business-scoped identities without requiring a visible pho
   expect(whatsappSenderPattern.test("<script>")).toBe(false);
   const parsed = parseWhatsAppWebhook(payload([{ ...message, from: undefined }]), now);
   expect(parsed.messages[0].sender_id).toBe("MX.abc123");
+  expect(parsed.messages[0].sender_phone).toBeNull();
+  expect(parseWhatsAppWebhook(payload(), now).messages[0].sender_phone).toBe(message.from);
+  expect(
+    parseWhatsAppWebhook(payload([{ ...message, from: "invalid-phone" }]), now).messages[0]
+      .sender_phone,
+  ).toBeNull();
 });
 it("deduplicates incoming IDs within a phone and preserves separate phones", () => {
   const p = payload([message, message]);
@@ -141,6 +147,18 @@ it("sends BSUIDs using recipient and adds a callback key for timeout recovery", 
   expect(body.recipient).toBe("MX.abc123");
   expect(body.to).toBeUndefined();
   expect(body.biz_opaque_callback_data).toBe("client-id");
+});
+it("routes to the signed webhook phone when available without changing the BSUID thread", async () => {
+  const fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ messages: [{ id: "wamid.phone" }] }),
+  });
+  vi.stubGlobal("fetch", fetch);
+  await sendWhatsAppText("456", "MX.abc123", "Hola", "private-token", "client-id", message.from);
+  expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({ to: message.from });
+  expect(JSON.parse(fetch.mock.calls[0][1].body).recipient).toBeUndefined();
+  await sendWhatsAppText("456", "MX.abc123", "Hola", "private-token", "client-id", "invalid");
+  expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({ recipient: "MX.abc123" });
 });
 it("checks token issuer and granted assets before accepting the phone", async () => {
   vi.stubGlobal(
@@ -230,16 +248,14 @@ it("denies anonymous inbox, replies and sale preparation before accessing privat
 it("distinguishes explicit provider rejection without exposing its message", async () => {
   vi.stubGlobal(
     "fetch",
-    vi
-      .fn()
-      .mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            error: { code: 131030, message: "private credential must not escape" },
-          }),
-          { status: 400 },
-        ),
+    vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: { code: 131030, message: "private credential must not escape" },
+        }),
+        { status: 400 },
       ),
+    ),
   );
   const error = await whatsappGraph("456/messages", "private-token", { method: "POST" }).catch(
     (e) => e,

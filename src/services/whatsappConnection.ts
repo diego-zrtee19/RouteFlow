@@ -205,6 +205,7 @@ export async function sendWhatsAppText(
   text: string,
   token: string,
   clientId: string,
+  senderPhone?: string | null,
 ) {
   if (!whatsappPhoneAllowed(phoneId) || !whatsappSenderPattern.test(sender))
     throw Error("WhatsApp phone not enabled");
@@ -217,7 +218,11 @@ export async function sendWhatsAppText(
       body: JSON.stringify({
         messaging_product: "whatsapp",
         recipient_type: "individual",
-        ...(sender.includes(".") ? { recipient: sender } : { to: sender }),
+        ...(senderPhone && /^\d{6,20}$/.test(senderPhone)
+          ? { to: senderPhone }
+          : sender.includes(".")
+            ? { recipient: sender }
+            : { to: sender }),
         biz_opaque_callback_data: clientId,
         type: "text",
         text: { preview_url: false, body: text },

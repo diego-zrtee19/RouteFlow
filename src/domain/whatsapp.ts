@@ -14,6 +14,7 @@ export type WhatsAppIncoming = {
   phone_number_id: string;
   message_id: string;
   sender_id: string;
+  sender_phone: string | null;
   message_text: string;
   sent_at: string;
 };
@@ -94,6 +95,11 @@ export function parseWhatsAppWebhook(payload: unknown, now = Date.now()) {
           phone_number_id: phone,
           message_id: id,
           sender_id: sender,
+          // Only the signed webhook may associate a phone with this conversation.
+          sender_phone:
+            typeof message?.from === "string" && /^\d{6,20}$/.test(message.from)
+              ? message.from
+              : null,
           message_text: text,
           sent_at: sentAt,
         });
