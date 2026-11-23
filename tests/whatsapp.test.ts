@@ -13,6 +13,8 @@ import {
   whatsappPhoneAllowed,
   sendWhatsAppText,
   verifiedWhatsAppPhone,
+  whatsappGraph,
+  WhatsAppProviderRejection,
 } from "@/services/whatsappConnection";
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), seller: vi.fn() }));
 vi.mock("@/lib/supabaseAdmin", () => ({ getSupabaseAdmin: () => ({ rpc: mocks.rpc }) }));
@@ -143,18 +145,16 @@ it("sends BSUIDs using recipient and adds a callback key for timeout recovery", 
 it("checks token issuer and granted assets before accepting the phone", async () => {
   vi.stubGlobal(
     "fetch",
-    vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          data: {
-            is_valid: true,
-            app_id: "wrong-app",
-            scopes: ["whatsapp_business_management", "whatsapp_business_messaging"],
-          },
-        }),
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: {
+          is_valid: true,
+          app_id: "wrong-app",
+          scopes: ["whatsapp_business_management", "whatsapp_business_messaging"],
+        },
       }),
+    }),
   );
   await expect(
     verifiedWhatsAppPhone("token", "123", "456", "correct-app", "secret"),
@@ -225,4 +225,55 @@ it("denies anonymous inbox, replies and sale preparation before accessing privat
       ).status,
     ).toBe(401);
   expect(mocks.rpc).not.toHaveBeenCalled();
+});
+
+it("distinguishes explicit provider rejection without exposing its message", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            error: { code: 131030, message: "private credential must not escape" },
+          }),
+          { status: 400 },
+        ),
+      ),
+  );
+  const error = await whatsappGraph("456/messages", "private-token", { method: "POST" }).catch(
+    (e) => e,
+  );
+  expect(error).toBeInstanceOf(WhatsAppProviderRejection);
+  if (!(error instanceof WhatsAppProviderRejection)) throw error;
+  expect(error.providerCode).toBe(131030);
+  expect(String(error)).not.toContain("private");
+});
+it.each([408, 500, 503])(
+  "keeps HTTP %s uncertain instead of enabling a blind resend",
+  async (status) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { code: 1 } }), { status })),
+    );
+    const error = await whatsappGraph("456/messages", "private-token", { method: "POST" }).catch(
+      (e) => e,
+    );
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(WhatsAppProviderRejection);
+  },
+);
+it("keeps a malformed rejection and a network timeout uncertain", async () => {
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(new Response("proxy error", { status: 400 }))
+    .mockRejectedValueOnce(new Error("timeout"));
+  vi.stubGlobal("fetch", fetchMock);
+  for (let i = 0; i < 2; i++) {
+    const error = await whatsappGraph("456/messages", "private-token", { method: "POST" }).catch(
+      (e) => e,
+    );
+    expect(error).toBeInstanceOf(Error);
+    expect(error).not.toBeInstanceOf(WhatsAppProviderRejection);
+  }
 });

@@ -7,6 +7,7 @@ import {
   whatsappKeyConfigured,
   whatsappPhoneAllowed,
   sendWhatsAppText,
+  WhatsAppProviderRejection,
 } from "@/services/whatsappConnection";
 import { readPublicJson, publicRequestError } from "@/lib/publicRequestGuard";
 import { whatsappReplyAllowed, whatsappSenderPattern } from "@/domain/whatsapp";
@@ -261,15 +262,22 @@ export async function POST(request: Request) {
         .eq("status", "pending");
       if (error) throw error;
       return NextResponse.json({ status: "sent" }, { headers: privateHeaders });
-    } catch {
-      // A timeout can happen after Meta accepted the message. Never automatically resend it.
+    } catch (error) {
+      // A structured 4xx rejection proves no acceptance; timeouts/5xx remain uncertain.
+      const rejected = error instanceof WhatsAppProviderRejection;
       await admin
         .from("seller_whatsapp_replies")
-        .update({ status: "unknown" })
+        .update({ status: rejected ? "failed" : "unknown" })
         .eq("connection_id", connection.id)
         .eq("client_id", body.clientId)
         .eq("status", "pending");
-      return NextResponse.json({ status: "unknown" }, { headers: privateHeaders });
+      return NextResponse.json(
+        {
+          status: rejected ? "failed" : "unknown",
+          ...(rejected ? { providerCode: error.providerCode } : {}),
+        },
+        { headers: privateHeaders },
+      );
     }
   } catch {
     return apiErrorResponse(

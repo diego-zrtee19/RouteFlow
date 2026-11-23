@@ -103,6 +103,14 @@ export function decryptWhatsAppToken(value: string, connection: string) {
     decipher.final(),
   ]).toString("utf8");
 }
+/** Explicit client rejection is different from a timeout after provider acceptance.
+ * Keep only numeric provider codes; never retain messages that may echo credentials. */
+export class WhatsAppProviderRejection extends Error {
+  constructor(readonly providerCode: number) {
+    super("WhatsApp rejected the request");
+    this.name = "WhatsAppProviderRejection";
+  }
+}
 export async function whatsappGraph<T>(
   path: string,
   token: string,
@@ -115,7 +123,15 @@ export async function whatsappGraph<T>(
     redirect: "error",
     signal: AbortSignal.timeout(10000),
   });
-  if (!response.ok) throw Error("WhatsApp Graph request failed");
+  if (!response.ok) {
+    if (response.status >= 400 && response.status < 500 && response.status !== 408) {
+      const result = await response.json().catch(() => null);
+      const code = result?.error?.code;
+      if (typeof code === "number" && Number.isSafeInteger(code) && code > 0)
+        throw new WhatsAppProviderRejection(code);
+    }
+    throw Error("WhatsApp Graph request failed");
+  }
   return response.json();
 }
 export async function exchangeWhatsAppCode(

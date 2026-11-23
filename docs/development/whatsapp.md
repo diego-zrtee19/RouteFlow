@@ -58,3 +58,9 @@ Referencias oficiales: [Embedded Signup](https://developers.facebook.com/documen
 No imprimir credenciales en salidas de herramientas ni guardarlas en Git. Transferir directamente al formulario privado de Vercel. El transporte temporal cifrado usado durante diagnóstico fue eliminado. No borrar perfiles del navegador ni ampliar permisos para resolver bloqueos de control. El control volvió a responder, pero no hay causa raíz ni solución permanente de esa desconexión confirmadas.
 
 Las credenciales temporales de Meta requieren renovación; una integración comercial necesita su configuración duradera y revisión independiente. El modo de prueba no equivale a esa aprobación.
+
+### Resultado del primer envío y manejo de rechazos
+
+La credencial se renovó el 23 de noviembre con el mismo alcance TEST y se reconectó la tienda. Se intentó enviar una sola respuesta autorizada desde la bandeja, con client_id `10acb6e9-dcc7-46a9-a130-4d9a83651e6b`. Quedó `unknown`, sin ID de proveedor: no presentarlo como enviado ni cambiar ese registro a fallido sin evidencia. Se preguntó al destinatario si lo recibió antes de intentar otro envío.
+
+Se corrigió la distinción de resultados: un HTTP 4xx (excepto 408) con error estructurado de Meta y código numérico se trata como rechazo explícito (`failed`); fallos de red, 408, 5xx y errores malformados permanecen inciertos. No se guardan ni muestran mensajes crudos del proveedor ni credenciales. La interfaz conserva el borrador y muestra el código numérico cuando Meta rechaza expresamente. Nunca hay reenvío automático. Pasaron 340 pruebas, incluidas regresiones para rechazo, timeout, 5xx y respuesta malformada.

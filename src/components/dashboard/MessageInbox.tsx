@@ -168,7 +168,7 @@ function Thread({
     setError("");
     setNotice("");
     try {
-      const result = await json<{ status: string }>(endpoint, {
+      const result = await json<{ status: string; providerCode?: number }>(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -183,6 +183,11 @@ function Thread({
         setAttempt(null);
         updateComposer((current) => ({ ...current, saleId: undefined }));
         setNotice(`Mensaje enviado a ${name}.`);
+      } else if (result.status === "failed") {
+        setAttempt(null);
+        setError(
+          `Meta rechazó el envío${result.providerCode ? ` (código ${result.providerCode})` : ""}. Tu borrador se conserva. Revisa la conexión antes de volver a intentarlo.`,
+        );
       } else {
         setUncertain(true);
         setNotice(
