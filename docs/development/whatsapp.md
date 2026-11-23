@@ -74,3 +74,11 @@ El intento controlado devolvió `131030`. La lista de Meta contiene al destinata
 Pruebas: 18 de WhatsApp y SQL con ROLLBACK aprobados; tipos y ESLint sin errores. La suite completa tuvo 339 pruebas aprobadas y dos timeouts de lectura de archivos; las 20 pruebas de ese archivo pasaron al repetirlas con límite de 20 segundos. Pendiente verificar recepción de la respuesta tras desplegar este ajuste; no afirmar entrega todavía.
 
 El primer envío usando el teléfono original también devolvió `131030`. Se contrastó la lista TEST (+52 y diez dígitos) con el `from` mexicano recibido (+521 y diez dígitos). Se adapta ese formato legado únicamente en transporte TEST cuando la identidad es MX; se conservan el valor recibido y el hilo, sin reescritura en LIVE ni reintentos automáticos.
+
+### Resultado real al cerrar la prueba del 23 de noviembre
+
+Preview `8b71c9b` compiló correctamente. A las 14:01 (Ciudad de México), Meta aceptó la respuesta autorizada y devolvió un ID de mensaje. Dos segundos después envió un webhook firmado de estado `failed`, con error **131031 / Business Account locked**. La base y la bandeja cambiaron el estado a no entregado; no hay recepción en el chat del destinatario. Esto verifica el envío de la solicitud y la recepción del estado, **no una respuesta entregada**. No reintentar mientras persista el bloqueo.
+
+La consulta de Business Support Home abrió una sesión de Instagram ajena al portfolio de la app; solo muestra el portfolio del perfil de prueba, no RouteFlow. Se solicitó a Diego entrar allí con el Facebook administrador de RouteFlow para revisar el bloqueo. No se creó cuenta publicitaria, no se añadió pago ni se activó LIVE. No se conoce todavía el motivo administrativo exacto del bloqueo ni se presentó una apelación.
+
+Pruebas finales del ajuste de formato: 19 de WhatsApp aprobadas; tipos y ESLint sin errores. Se mantiene el resultado de regresión y SQL indicado arriba. Las credenciales TEST siguen siendo temporales y la conexión de vendedores externos no está aprobada ni verificada.
