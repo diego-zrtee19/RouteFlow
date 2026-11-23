@@ -265,6 +265,7 @@ export async function POST(request: Request) {
     } catch (error) {
       // A structured 4xx rejection proves no acceptance; timeouts/5xx remain uncertain.
       const rejected = error instanceof WhatsAppProviderRejection;
+      if (rejected) console.warn("WhatsApp send rejected", { providerCode: error.providerCode });
       await admin
         .from("seller_whatsapp_replies")
         .update({ status: rejected ? "failed" : "unknown" })

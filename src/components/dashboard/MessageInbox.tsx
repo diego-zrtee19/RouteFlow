@@ -185,7 +185,8 @@ function Thread({
         setNotice(`Mensaje enviado a ${name}.`);
       } else if (result.status === "failed") {
         setAttempt(null);
-        setError(
+        // Keep the send result when background history refresh clears loading errors.
+        setNotice(
           `Meta rechazó el envío${result.providerCode ? ` (código ${result.providerCode})` : ""}. Tu borrador se conserva. Revisa la conexión antes de volver a intentarlo.`,
         );
       } else {
