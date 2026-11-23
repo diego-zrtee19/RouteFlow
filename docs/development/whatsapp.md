@@ -40,19 +40,21 @@ Pendiente para la prueba completa: número TEST autorizado, credencial privada, 
 
 Referencias oficiales: [Embedded Signup](https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/implementation), [v4](https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/version-4), [coexistencia](https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/onboarding-business-app-users), [BSUID](https://developers.facebook.com/documentation/business-messaging/whatsapp/business-scoped-user-ids).
 
-## Estado de vinculación — 22 de noviembre de 2026
+## Estado verificado — 23 de noviembre de 2026
 
-- Preview verificado del código: `f615234` (READY). Build, 335 pruebas y SQL de Instagram/WhatsApp pasaron.
-- Meta creó `Test Messaging Account` (WABA `1132194213134172`), número TEST `+1 (555) 192-8765`, phone ID `1532308693290006`.
-- Diego aceptó Platform/Cloud API y después Meta Business Tools. La autorización seleccionó solo esa cuenta actual, excluyendo cuentas futuras y números personales.
-- Autorizó guardar su credencial TEST únicamente en Vercel Preview y cifrada en Supabase DEV, ligada a su vendedor. No autorizó un envío real concreto de WhatsApp todavía.
-- Vercel tiene, solo en la rama Preview autorizada, IDs de WABA/teléfono/vendedor, allowlist de ese teléfono y LIVE=false. Se verificó el inventario de nombres y alcance sin leer valores secretos.
-- `WHATSAPP_TEST_ACCESS_TOKEN` y `WHATSAPP_WEBHOOK_VERIFY_TOKEN` se guardaron como Secret exclusivamente en la rama Vercel Preview autorizada mediante su formulario privado. Se verificaron los nombres, tipo y alcance sin revelar valores. **Todavía falta configurar/verificar el webhook, volver a desplegar y conectar el número desde la sesión del vendedor.** No presentar el número como vinculado a RouteFlow ni la recepción como validada.
-- La credencial temporal se trasladó directamente de Meta al formulario privado de Vercel. Una transferencia que devolvía el secreto al contexto de herramientas fue rechazada por revisión automática; no repetirla. Usar transferencia directa al formulario privado sin imprimir valores. El transporte temporal cifrado fue eliminado; no hay archivo de credencial en el repositorio.
-- El control de navegador dejó de responder a `service_info` y al inventario, también después de reiniciar el cliente de control. La aplicación Windows figura respondiendo. Un conteo sin contenido privado en cuatro logs recientes no encontró los cinco errores conocidos consultados: no hay causa raíz confirmada.
-- El control del navegador volvió a responder al retomar. No se borraron perfiles/cookies ni se cambiaron permisos globales. No hay corrección permanente confirmada del bloqueo. Las autorizaciones anteriores siguen válidas dentro del mismo alcance.
-- Guía oficial de recuperación de estados bloqueados: https://learn.chatgpt.com/docs/reference/troubleshooting
+- Código funcional `f615234`: compilación, 335 pruebas y SQL transaccional de ambos canales aprobados. Los commits posteriores solo registran configuración y comprobaciones.
+- Meta creó Test Messaging Account (WABA `1132194213134172`) y el número TEST `+1 (555) 192-8765`, phone ID `1532308693290006`.
+- Diego aceptó Platform/Cloud API y Meta Business Tools, seleccionando únicamente esa cuenta actual. Autorizó credenciales solo en Vercel Preview y cifradas en Supabase DEV; no hay autorización LIVE.
+- Las variables WhatsApp están limitadas a la rama `codex/routeflow-v2-preview`. Token de acceso y verificación son Secret. Allowlist solo del número TEST y LIVE=false.
+- Meta verificó el callback de Preview `/api/webhooks/whatsapp`; `messages` está suscrito.
+- La conexión `66dcf469-1c24-4013-9cce-e157afb6b033` se guardó cifrada desde Ajustes autenticados y se mostró conectada.
+- Diego autorizó usar su propio teléfono como destinatario TEST y la respuesta exacta «Prueba RouteFlow: respuesta enviada desde la bandeja». Completó personalmente la verificación de Meta. Su WhatsApp personal no se convirtió ni vinculó como vendedor.
+- **Recepción real confirmada:** el mensaje «hola» quedó en Meta a las 21:04:41 del 22 de noviembre (Ciudad de México) y en Supabase con sent_at `2026-11-23T03:04:38Z`, una sola fila con ID de proveedor. Esta evidencia sustituye el resultado vacío de la consulta anterior; no atribuir la demora a una causa no demostrada.
+- El 23 de noviembre se comprobó que la credencial temporal había vencido. Se renovó con la misma configuración y se actualizó el Secret de Preview. Pendiente aplicar el nuevo despliegue, renovar la conexión de la tienda y verificar respuesta enviada/entregada. Todavía no afirmar ida y vuelta completa.
+- La app Meta sigue sin publicar: no se validó onboarding de vendedores externos ni se activaron números/cobros reales.
 
-### Renovación y webhook TEST
+### Precauciones de mantenimiento
 
-Meta verificó y guardó el callback de Preview `/api/webhooks/whatsapp`; el campo `messages` figura suscrito. El intento de conexión inicial falló antes de guardar nada en Supabase: Graph Explorer confirmó credencial vencida (OAuth 190/463). Se renovó conservando la configuración anterior y la nueva credencial respondió correctamente a la consulta del número TEST. Se actualizó únicamente `WHATSAPP_TEST_ACCESS_TOKEN` en la rama Preview, sin revelar su valor. Hace falta aplicar ese cambio con un nuevo despliegue de la misma rama y repetir la conexión autenticada del vendedor. No hay recepción ni respuesta real de WhatsApp verificadas todavía.
+No imprimir credenciales en salidas de herramientas ni guardarlas en Git. Transferir directamente al formulario privado de Vercel. El transporte temporal cifrado usado durante diagnóstico fue eliminado. No borrar perfiles del navegador ni ampliar permisos para resolver bloqueos de control. El control volvió a responder, pero no hay causa raíz ni solución permanente de esa desconexión confirmadas.
+
+Las credenciales temporales de Meta requieren renovación; una integración comercial necesita su configuración duradera y revisión independiente. El modo de prueba no equivale a esa aprobación.
