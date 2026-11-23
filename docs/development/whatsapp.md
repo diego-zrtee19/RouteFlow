@@ -52,3 +52,7 @@ Referencias oficiales: [Embedded Signup](https://developers.facebook.com/documen
 - El control de navegador dejó de responder a `service_info` y al inventario, también después de reiniciar el cliente de control. La aplicación Windows figura respondiendo. Un conteo sin contenido privado en cuatro logs recientes no encontró los cinco errores conocidos consultados: no hay causa raíz confirmada.
 - El control del navegador volvió a responder al retomar. No se borraron perfiles/cookies ni se cambiaron permisos globales. No hay corrección permanente confirmada del bloqueo. Las autorizaciones anteriores siguen válidas dentro del mismo alcance.
 - Guía oficial de recuperación de estados bloqueados: https://learn.chatgpt.com/docs/reference/troubleshooting
+
+### Renovación y webhook TEST
+
+Meta verificó y guardó el callback de Preview `/api/webhooks/whatsapp`; el campo `messages` figura suscrito. El intento de conexión inicial falló antes de guardar nada en Supabase: Graph Explorer confirmó credencial vencida (OAuth 190/463). Se renovó conservando la configuración anterior y la nueva credencial respondió correctamente a la consulta del número TEST. Se actualizó únicamente `WHATSAPP_TEST_ACCESS_TOKEN` en la rama Preview, sin revelar su valor. Hace falta aplicar ese cambio con un nuevo despliegue de la misma rama y repetir la conexión autenticada del vendedor. No hay recepción ni respuesta real de WhatsApp verificadas todavía.
