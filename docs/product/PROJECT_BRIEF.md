@@ -20,6 +20,8 @@ Esta secuencia es una preferencia expresa de Diego. No se debe reemplazar por la
 
 ## Producto
 
+Ampliación solicitada el 23 de noviembre de 2026: evolucionar hacia la operación conectada del negocio descrita en [OPERATING_SYSTEM_VISION.md](OPERATING_SYSTEM_VISION.md). Sus módulos deben integrarse por etapas sobre la arquitectura existente, manteniendo las restricciones de pruebas y los límites de confianza aquí acordados.
+
 Infraestructura para compras que nacen en redes sociales: el vendedor consigue al comprador y comparte un enlace de compra rápida o un catálogo simple de sus productos. El comprador compra, consulta su pedido y puede pedir ayuda. No se busca convertirlo en un marketplace de descubrimiento.
 
 Venta rápida: un artículo ocasional. Catálogo: productos de un vendedor recurrente. Mantener ambas rutas. El comprador no necesita crear una cuenta para comprar y debe poder recuperar acceso seguro al seguimiento.

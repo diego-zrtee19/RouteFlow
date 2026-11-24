@@ -10,7 +10,8 @@ const primary = [
   { label: "Mi tienda", href: "/dashboard/catalogo", icon: Store },
 ];
 const secondary = [
-  { label: "Mensajes de Instagram", href: "/dashboard/messages" },
+  { label: "Mensajes", href: "/dashboard/messages" },
+  { label: "Clientes", href: "/dashboard/customers" },
   { label: "Resultados", href: "/dashboard/analytics" },
   { label: "Casos de ayuda", href: "/dashboard/disputes" },
   { label: "Ajustes", href: "/dashboard/settings" },
