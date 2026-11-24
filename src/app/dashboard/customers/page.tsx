@@ -134,6 +134,12 @@ function CustomerCard({
         </p>
       </div>
       <h3 className="border-t border-line pt-5 font-semibold">Historial de pedidos</h3>
+      <Link
+        href="/dashboard/finances"
+        className="mt-3 inline-flex text-sm font-medium text-accent-700 underline underline-offset-4"
+      >
+        Revisar cobros y gastos del negocio
+      </Link>
       {loading ? (
         <p className="py-4" role="status">
           Cargando historial…

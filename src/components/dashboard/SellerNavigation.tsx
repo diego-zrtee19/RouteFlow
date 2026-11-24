@@ -12,6 +12,7 @@ const primary = [
 const secondary = [
   { label: "Mensajes", href: "/dashboard/messages" },
   { label: "Clientes", href: "/dashboard/customers" },
+  { label: "Cobros y gastos", href: "/dashboard/finances" },
   { label: "Resultados", href: "/dashboard/analytics" },
   { label: "Casos de ayuda", href: "/dashboard/disputes" },
   { label: "Ajustes", href: "/dashboard/settings" },
