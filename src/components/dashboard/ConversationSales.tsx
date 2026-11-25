@@ -373,7 +373,7 @@ export function ConversationSales({
             </div>
             <ol aria-label="Progreso de la venta" className="flex flex-wrap gap-2 text-[11px]">
               {[
-                "Conversación",
+                channel === "quotes" ? "Propuesta" : "Conversación",
                 "Preparado",
                 "Enviado / compra iniciada",
                 "Pago confirmado",
@@ -436,8 +436,10 @@ export function ConversationSales({
                   className="w-full rounded-lg border border-line bg-surface p-2 text-xs"
                 />
                 <p className="text-xs text-muted">
-                  Válido hasta {new Date(sale.expiresAt).toLocaleDateString("es-MX")}. Se marca
-                  enviado cuando Meta confirma el mensaje con este enlace.
+                  Válido hasta {new Date(sale.expiresAt).toLocaleDateString("es-MX")}.{" "}
+                  {channel === "quotes"
+                    ? "Compartir es manual. Copiar el enlace no confirma su envío ni aceptación."
+                    : "Se marca enviado cuando Meta confirma el mensaje con este enlace."}
                 </p>
               </>
             ) : (
@@ -450,7 +452,9 @@ export function ConversationSales({
       })}
       {!loading && !sales.length && (
         <p className="text-sm text-muted">
-          Todavía no has preparado una compra para esta conversación.
+          {channel === "quotes"
+            ? "Todavía no has preparado cotizaciones."
+            : "Todavía no has preparado una compra para esta conversación."}
         </p>
       )}
     </section>
