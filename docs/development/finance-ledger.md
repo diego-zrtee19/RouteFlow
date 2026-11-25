@@ -20,3 +20,7 @@ La pantalla muestra hasta 500 movimientos del mes y los últimos 100 pedidos. Lo
 `tests/sql/finance-ledger.sql`: fixtures sintéticos con ROLLBACK, anticipos, reintento, saldo, aislamiento, exceso, conflicto proveedor/manual y ausencia de acceso público. No llama pagos ni envía mensajes.
 
 Migraciones DEV: `20261124024826_seller_finance_ledger.sql` y `20261124180803_seller_finance_balances.sql`. No se aplicaron en Production.
+
+## Recorrido verificado en Preview — 24 de noviembre de 2026
+
+Commit funcional `7694c9b`, despliegue `dpl_AoK4SSipCUeBu4ZF4qHfaV3qnBHn` READY en Preview. Compilación, tipos y ESLint aprobados; 350 pruebas y SQL con ROLLBACK aprobados. Desde el navegador autenticado se registró un gasto ficticio de 25 MXN etiquetado QA, se anuló con motivo y se descargó CSV. Se verificó el archivo descargado: contiene el registro marcado Anulado=Sí. No se hicieron pagos ni movimientos bancarios reales. La prueba de anticipos/saldos/aislamiento se realizó con fixtures SQL, porque los pedidos de esta tienda ya estaban pagados o cancelados. No afirmar un anticipo real probado en navegador.
