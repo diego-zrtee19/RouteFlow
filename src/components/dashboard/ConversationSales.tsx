@@ -49,7 +49,7 @@ export function ConversationSales({
   onCompose,
   composeDisabled = false,
 }: {
-  channel?: "instagram" | "whatsapp";
+  channel?: "instagram" | "whatsapp" | "quotes";
   sender: string;
   draft: ConversationSaleDraft;
   updateDraft: (change: (current: ConversationSaleDraft) => ConversationSaleDraft) => void;
@@ -208,12 +208,14 @@ export function ConversationSales({
   }
   return (
     <section
-      aria-label="Ventas de esta conversación"
+      aria-label={channel === "quotes" ? "Cotizaciones del negocio" : "Ventas de esta conversación"}
       className="border-t border-line bg-white p-4 space-y-4"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-semibold text-ink">De la conversación a la compra</h3>
+          <h3 className="font-semibold text-ink">
+            {channel === "quotes" ? "Tus propuestas de compra" : "De la conversación a la compra"}
+          </h3>
           <p className="mt-1 text-xs leading-relaxed text-muted">
             Prepara el enlace, compártelo y vuelve aquí para ver el pago y la entrega.
           </p>
@@ -402,7 +404,11 @@ export function ConversationSales({
                   <p className="text-sm">Rastreo: {sale.order.trackingNumber}</p>
                 )}
                 <Link
-                  href={`/dashboard/orders/${sale.order.id}?instagram=${encodeURIComponent(sender)}${channel === "whatsapp" ? "&channel=whatsapp" : ""}`}
+                  href={
+                    channel === "quotes"
+                      ? `/dashboard/orders/${sale.order.id}`
+                      : `/dashboard/orders/${sale.order.id}?instagram=${encodeURIComponent(sender)}${channel === "whatsapp" ? "&channel=whatsapp" : ""}`
+                  }
                   className={buttonStyles({ size: "sm" })}
                 >
                   {progress.action}
@@ -412,7 +418,9 @@ export function ConversationSales({
               <>
                 <div className="flex flex-wrap gap-2">
                   <Button size="sm" disabled={composeDisabled} onClick={() => onCompose(sale)}>
-                    Poner enlace en la respuesta
+                    {channel === "quotes"
+                      ? "Copiar para compartir"
+                      : "Poner enlace en la respuesta"}
                   </Button>
                   <Button size="sm" variant="secondary" onClick={() => copy(sale)}>
                     Copiar enlace
