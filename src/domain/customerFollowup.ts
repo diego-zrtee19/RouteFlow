@@ -2,7 +2,7 @@ export type CustomerSummary = {
   email: string;
   name: string | null;
   order_count: number;
-  last_order_at: string;
+  last_order_at: string | null;
   note: string;
   followup_at: string | null;
   revision: number;
@@ -37,4 +37,19 @@ export function parseCustomerFollowup(body: Record<string, unknown>) {
     revision: Number(body.revision),
     followupAt: body.followupAt === null ? null : new Date(body.followupAt as string).toISOString(),
   };
+}
+
+export function parseProspect(body: Record<string, unknown>) {
+  if (
+    typeof body.name !== "string" ||
+    !body.name.trim() ||
+    body.name.length > 200 ||
+    body.name.includes("\0") ||
+    typeof body.email !== "string" ||
+    body.email.length > 254 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email.trim()) ||
+    body.email.includes("\0")
+  )
+    return null;
+  return { name: body.name.trim(), email: body.email.trim().toLowerCase() };
 }

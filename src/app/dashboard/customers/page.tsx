@@ -13,6 +13,84 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return result;
 }
 const date = (value: string) => new Date(value).toLocaleString("es-MX");
+function ProspectForm({ onCreated }: { onCreated: (email: string) => void }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  return (
+    <details className="mb-6 rounded-2xl border border-line bg-white p-5">
+      <summary className="cursor-pointer font-semibold py-2">Agregar contacto interesado</summary>
+      <p className="mt-2 text-sm text-muted">
+        Guarda a alguien que te consultó, aunque todavía no haya comprado. No verificamos este
+        correo ni enviaremos mensajes.
+      </p>
+      <form
+        className="mt-4 space-y-4"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (busy) return;
+          setBusy(true);
+          setMessage("");
+          try {
+            const result = await request<{ created: boolean; email: string }>(
+              "/api/dashboard/customers",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: "prospect", name, email }),
+              },
+            );
+            setMessage(
+              result.created
+                ? "Contacto guardado. Abre su ficha para añadir notas y próximo contacto."
+                : "Ese correo ya estaba registrado; conservamos su ficha original.",
+            );
+            onCreated(result.email);
+            setName("");
+            setEmail("");
+          } catch (error) {
+            setMessage(error instanceof Error ? error.message : "No se guardó. Puedes reintentar.");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <label className="block text-sm font-medium">
+          Nombre
+          <input
+            className="mt-2 block w-full rounded-xl border border-line p-3"
+            required
+            maxLength={200}
+            autoComplete="off"
+            value={name}
+            disabled={busy}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </label>
+        <label className="block text-sm font-medium">
+          Correo del contacto
+          <input
+            className="mt-2 block w-full rounded-xl border border-line p-3"
+            required
+            type="email"
+            maxLength={254}
+            autoComplete="off"
+            value={email}
+            disabled={busy}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </label>
+        <Button type="submit" isLoading={busy}>
+          Guardar contacto
+        </Button>
+        <p role="status" className="text-sm">
+          {message}
+        </p>
+      </form>
+    </details>
+  );
+}
 function CustomerCard({
   customer,
   onSaved,
@@ -92,7 +170,10 @@ function CustomerCard({
       <h2 className="text-xl font-semibold text-ink">{customer.name || "Cliente"}</h2>
       <p className="break-all text-sm text-muted">{customer.email}</p>
       <p className="mt-2 text-sm text-muted">
-        Agrupado por el correo indicado al comprar. No implica identidad verificada.
+        {customer.order_count === 0
+          ? "Contacto registrado por ti, todavía sin pedidos."
+          : "Agrupado por el correo indicado al comprar."}{" "}
+        No implica identidad verificada ni permiso para campañas.
       </p>
       <div className="my-6 space-y-4">
         <label className="block text-sm font-medium">
@@ -176,6 +257,11 @@ function CustomerCard({
           ))}
         </ul>
       )}
+      {!loading && !loadError && orders.length === 0 && (
+        <p className="py-4 text-sm text-muted">
+          Este contacto todavía no tiene pedidos asociados a este correo.
+        </p>
+      )}
       {hasMore && (
         <p className="text-sm text-muted">
           Mostrando los 100 pedidos más recientes. Consulta Pedidos para el resto.
@@ -226,9 +312,18 @@ function Customers() {
         <p className="text-sm font-medium text-accent-700">Relación con tus compradores</p>
         <h1 className="mt-1 text-3xl font-semibold text-ink">Clientes</h1>
         <p className="mt-3 max-w-2xl text-muted">
-          Tus compras ya generan un historial. Guarda preferencias y decide a quién dar seguimiento.
+          Reúne contactos interesados y compradores. Guarda preferencias y decide a quién dar
+          seguimiento.
         </p>
       </header>
+      <ProspectForm
+        onCreated={(email) => {
+          setSearch(email.slice(0, 100));
+          setQuery(email.slice(0, 100));
+          setOffset(0);
+          setRetry((n) => n + 1);
+        }}
+      />
       <form
         className="mb-6 flex flex-wrap gap-3"
         onSubmit={(e) => {
@@ -266,11 +361,11 @@ function Customers() {
           ) : rows.length === 0 && !error ? (
             <div className="rounded-2xl border border-line bg-white p-7">
               <h2 className="font-semibold">
-                {query ? "No hay coincidencias" : "Todavía no tienes clientes con pedidos"}
+                {query ? "No hay coincidencias" : "Todavía no tienes contactos"}
               </h2>
               <p className="mt-2 text-sm text-muted">
-                Cada pedido con correo aparecerá aquí automáticamente. No necesitas capturarlo otra
-                vez.
+                Agrega un contacto interesado o espera tu primer pedido. Cada compra con correo
+                aparecerá aquí automáticamente.
               </p>
             </div>
           ) : (
@@ -295,7 +390,9 @@ function Customers() {
                 <span className="block font-semibold text-ink">{customer.name || "Cliente"}</span>
                 <span className="block break-all text-sm text-muted">{customer.email}</span>
                 <span className="mt-3 block text-sm">
-                  {customer.order_count} pedidos · Último: {date(customer.last_order_at)}
+                  {customer.order_count === 0
+                    ? "Interesado · sin compras todavía"
+                    : `${customer.order_count} pedidos${customer.last_order_at ? ` · Último: ${date(customer.last_order_at)}` : ""}`}
                 </span>
                 {customer.followup_at && (
                   <span className="mt-2 block text-sm font-medium text-accent-700">

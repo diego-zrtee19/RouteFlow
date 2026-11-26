@@ -3,7 +3,7 @@ import { requireSeller } from "@/lib/authz";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { apiErrorResponse } from "@/lib/apiResponse";
 import { readPublicJson, publicRequestError } from "@/lib/publicRequestGuard";
-import { parseCustomerFollowup } from "@/domain/customerFollowup";
+import { parseCustomerFollowup, parseProspect } from "@/domain/customerFollowup";
 const headers = { "Cache-Control": "private, no-store" };
 export async function GET(request: Request) {
   const seller = await requireSeller();
@@ -60,7 +60,26 @@ export async function POST(request: Request) {
     return apiErrorResponse("FORBIDDEN", "Solicitud no permitida", 403);
   let body;
   try {
-    body = parseCustomerFollowup(await readPublicJson(request));
+    const raw = await readPublicJson(request);
+    if (raw.action === "prospect") {
+      const prospect = parseProspect(raw);
+      if (!prospect)
+        return apiErrorResponse("VALIDATION_ERROR", "Revisa nombre y correo del contacto", 400);
+      const { data, error } = await getSupabaseAdmin().rpc("create_seller_prospect", {
+        p_seller: seller.value.id,
+        p_actor: seller.value.userId,
+        p_email: prospect.email,
+        p_name: prospect.name,
+      });
+      if (error)
+        return apiErrorResponse(
+          "INTERNAL_ERROR",
+          "No pudimos guardar el contacto. Puedes reintentar.",
+          500,
+        );
+      return NextResponse.json({ created: data === true, email: prospect.email }, { headers });
+    }
+    body = parseCustomerFollowup(raw);
   } catch (error) {
     return (
       publicRequestError(error) ?? apiErrorResponse("VALIDATION_ERROR", "Datos inválidos", 400)

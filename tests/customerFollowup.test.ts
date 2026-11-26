@@ -1,11 +1,45 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { parseCustomerFollowup } from "@/domain/customerFollowup";
+import { parseCustomerFollowup, parseProspect } from "@/domain/customerFollowup";
 const mocks = vi.hoisted(() => ({ seller: vi.fn(), rpc: vi.fn() }));
 vi.mock("@/lib/authz", () => ({ requireSeller: mocks.seller }));
 vi.mock("@/lib/supabaseAdmin", () => ({ getSupabaseAdmin: () => ({ rpc: mocks.rpc }) }));
 import { GET, POST } from "@/app/api/dashboard/customers/route";
 beforeEach(() => {
   vi.resetAllMocks();
+});
+it("normalizes a prospect and refuses missing names or invalid email addresses", () => {
+  expect(parseProspect({ name: "  Ana  ", email: " Buyer@Example.test " })).toEqual({
+    name: "Ana",
+    email: "buyer@example.test",
+  });
+  expect(parseProspect({ name: "", email: "buyer@example.test" })).toBeNull();
+  expect(parseProspect({ name: "Ana", email: "not-an-address" })).toBeNull();
+  expect(parseProspect({ name: "x".repeat(201), email: "buyer@example.test" })).toBeNull();
+});
+it("creates prospects only under the authenticated seller without accepting caller identity", async () => {
+  mocks.seller.mockResolvedValue({ ok: true, value: { id: "owner", userId: "actor" } });
+  mocks.rpc.mockResolvedValue({ data: false, error: null });
+  const response = await POST(
+    new Request("https://routeflow.test/api/dashboard/customers", {
+      method: "POST",
+      headers: { origin: "https://routeflow.test", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "prospect",
+        name: "Ana",
+        email: "Buyer@Example.test",
+        sellerId: "someone-else",
+        actor: "someone-else",
+      }),
+    }),
+  );
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ created: false, email: "buyer@example.test" });
+  expect(mocks.rpc).toHaveBeenCalledWith("create_seller_prospect", {
+    p_seller: "owner",
+    p_actor: "actor",
+    p_email: "buyer@example.test",
+    p_name: "Ana",
+  });
 });
 it("normalizes customer email and rejects oversized notes and invalid dates", () => {
   expect(
