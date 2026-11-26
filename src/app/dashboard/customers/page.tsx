@@ -197,6 +197,15 @@ function CustomerCard({
             className="mt-2 block w-full rounded-xl border border-line p-3"
             value={localDate}
             disabled={saving}
+            onBlur={(e) => {
+              const value = e.currentTarget.value;
+              if (value && !Number.isFinite(Date.parse(value))) return;
+              const next = value ? new Date(value).toISOString() : "";
+              if (next !== (followup || "")) {
+                setFollowup(next);
+                onDirty(true);
+              }
+            }}
             onChange={(e) => {
               if (e.target.value && !Number.isFinite(Date.parse(e.target.value))) return;
               setFollowup(e.target.value ? new Date(e.target.value).toISOString() : "");
@@ -204,6 +213,35 @@ function CustomerCard({
             }}
           />
         </label>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={saving}
+            onClick={() => {
+              const tomorrow = new Date();
+              tomorrow.setDate(tomorrow.getDate() + 1);
+              tomorrow.setHours(9, 0, 0, 0);
+              setFollowup(tomorrow.toISOString());
+              onDirty(true);
+            }}
+          >
+            Mañana a las 9:00
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={saving || !followup}
+            onClick={() => {
+              setFollowup("");
+              onDirty(true);
+            }}
+          >
+            Quitar recordatorio
+          </Button>
+        </div>
         <p className="text-sm text-muted">
           La fecha organiza tus pendientes aquí. No envía mensajes ni notificaciones
           automáticamente.
