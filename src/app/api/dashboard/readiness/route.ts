@@ -15,6 +15,8 @@ export async function GET() {
       { data: orders, error: oe },
       { data: alerts, error: ale },
       pending,
+      followups,
+      inventory,
     ] = await Promise.all([
       db
         .from("sellers")
@@ -25,7 +27,7 @@ export async function GET() {
         .single(),
       db
         .from("products")
-        .select("id,title,weight_kg,package_dimensions,delivery_options,is_active")
+        .select("id,title,stock,weight_kg,package_dimensions,delivery_options,is_active")
         .eq("seller_id", a.value.id),
       db
         .from("notification_outbox")
@@ -54,9 +56,32 @@ export async function GET() {
         .in("status", ["PAID", "READY_TO_SHIP", "DISPUTED"])
         .order("created_at", { ascending: true })
         .limit(12),
+      db
+        .from("seller_customer_followup")
+        .select("email,followup_at", { count: "exact" })
+        .eq("seller_id", a.value.id)
+        .not("followup_at", "is", null)
+        .lte("followup_at", new Date(Date.now() + 86400000).toISOString())
+        .order("followup_at", { ascending: true })
+        .limit(12),
+      db
+        .from("product_business_details")
+        .select("product_id,low_stock_threshold")
+        .eq("seller_id", a.value.id)
+        .order("product_id")
+        .limit(1001),
     ]);
-    if (se || pe || ne || oe || ale || pending.error)
-      throw se || pe || ne || oe || ale || pending.error;
+    if (se || pe || ne || oe || ale || pending.error || followups.error || inventory.error)
+      throw se || pe || ne || oe || ale || pending.error || followups.error || inventory.error;
+    const imported = (inventory.data ?? []).slice(0, 1000);
+    const drafts = (products ?? []).filter(
+      (p) => !p.is_active && imported.some((d) => d.product_id === p.id),
+    );
+    const lowStock = (products ?? []).filter(
+      (p) =>
+        p.is_active &&
+        p.stock <= (imported.find((d) => d.product_id === p.id)?.low_stock_threshold ?? 3),
+    );
     const origin = s.ship_from_address;
     const configured =
       origin &&
@@ -74,73 +99,100 @@ export async function GET() {
           ["length", "width", "height"].every((k) => Number(p.package_dimensions[k]) > 0)
         ),
     );
-    return NextResponse.json({
-      checks: [
-        {
-          label: "Datos de contacto",
-          done: Boolean(s.contact_email && s.contact_phone),
-          href: "/dashboard/settings",
-        },
-        {
-          label: "Dirección real de origen",
-          done:
-            shipping.length === 0 ||
-            Boolean(configured && !JSON.stringify(origin).toUpperCase().includes("DEMO")),
-          href: "/dashboard/settings",
-        },
-        {
-          label: "Primer producto publicado",
-          done: (products ?? []).some((p) => p.is_active),
-          href: "/dashboard/products/new",
-        },
-        {
-          label: "Peso y dimensiones de productos con envío",
-          done: shipping.every(
-            (p) =>
-              Number(p.weight_kg) > 0 &&
-              p.package_dimensions &&
-              ["length", "width", "height"].every((k) => Number(p.package_dimensions[k]) > 0),
-          ),
-          href: "/dashboard/products",
-        },
-        {
-          label: "Cuenta de Stripe lista para recibir fondos",
-          done: Boolean(
-            s.stripe_account_id && s.stripe_transfers_enabled && s.stripe_payouts_enabled,
-          ),
-          href: "/dashboard/settings",
-        },
-      ],
-      notifications: (notes ?? []).map((note) => ({
-        ...note,
-        body: readableNotificationBody(note.body),
-      })),
-      alerts: alerts ?? [],
-      taskSummary: {
-        pendingOrders: pending.count ?? pending.data?.length ?? 0,
-        incompletePackages: incompletePackages.length,
-      },
-      actions: [
-        ...(pending.data ?? [])
-          .sort((a, b) => Number(b.status === "DISPUTED") - Number(a.status === "DISPUTED"))
-          .map((o) => ({
-            id: o.id,
-            label: `${o.order_number}: ${o.status === "DISPUTED" ? "Responder al caso" : o.delivery_method === "shipping" ? "Preparar envío / generar etiqueta" : "Coordinar entrega / confirmar NIP"}`,
-            href:
-              o.status === "DISPUTED"
-                ? `/dashboard/disputes#case-order-${o.id}`
-                : `/dashboard/orders/${o.id}`,
-          })),
-        ...incompletePackages.map((product) => ({
-          id: `package-${product.id}`,
-          label: `${product.title}: completa el peso y las dimensiones del paquete`,
-          href: `/dashboard/products#product-${product.id}`,
+    return NextResponse.json(
+      {
+        checks: [
+          {
+            label: "Datos de contacto",
+            done: Boolean(s.contact_email && s.contact_phone),
+            href: "/dashboard/settings",
+          },
+          {
+            label: "Dirección real de origen",
+            done:
+              shipping.length === 0 ||
+              Boolean(configured && !JSON.stringify(origin).toUpperCase().includes("DEMO")),
+            href: "/dashboard/settings",
+          },
+          {
+            label: "Primer producto publicado",
+            done: (products ?? []).some((p) => p.is_active),
+            href: "/dashboard/products/new",
+          },
+          {
+            label: "Peso y dimensiones de productos con envío",
+            done: shipping.every(
+              (p) =>
+                Number(p.weight_kg) > 0 &&
+                p.package_dimensions &&
+                ["length", "width", "height"].every((k) => Number(p.package_dimensions[k]) > 0),
+            ),
+            href: "/dashboard/products",
+          },
+          {
+            label: "Cuenta de Stripe lista para recibir fondos",
+            done: Boolean(
+              s.stripe_account_id && s.stripe_transfers_enabled && s.stripe_payouts_enabled,
+            ),
+            href: "/dashboard/settings",
+          },
+        ],
+        notifications: (notes ?? []).map((note) => ({
+          ...note,
+          body: readableNotificationBody(note.body),
         })),
-      ],
-      settlements: (orders ?? []).filter((o) => o.status === "COMPLETED"),
-      emailDelivery:
-        process.env.ROUTEFLOW_EMAIL_DELIVERY === "enabled" && Boolean(process.env.RESEND_API_KEY),
-    });
+        alerts: alerts ?? [],
+        taskSummary: {
+          pendingOrders: pending.count ?? pending.data?.length ?? 0,
+          incompletePackages: incompletePackages.length,
+          dueContacts: followups.count ?? followups.data?.length ?? 0,
+          lowStock: lowStock.length,
+          importedDrafts: drafts.length,
+          inventoryMayBePartial:
+            (inventory.data ?? []).length > 1000 || (products ?? []).length >= 1000,
+        },
+        actions: [
+          ...(pending.data ?? [])
+            .sort((a, b) => Number(b.status === "DISPUTED") - Number(a.status === "DISPUTED"))
+            .map((o) => ({
+              id: o.id,
+              label: `${o.order_number}: ${o.status === "DISPUTED" ? "Responder al caso" : o.delivery_method === "shipping" ? "Preparar envío / generar etiqueta" : "Coordinar entrega / confirmar NIP"}`,
+              href:
+                o.status === "DISPUTED"
+                  ? `/dashboard/disputes#case-order-${o.id}`
+                  : `/dashboard/orders/${o.id}`,
+            })),
+          ...incompletePackages.map((product) => ({
+            id: `package-${product.id}`,
+            label: `${product.title}: completa el peso y las dimensiones del paquete`,
+            href: `/dashboard/products#product-${product.id}`,
+          })),
+          ...(followups.data ?? []).map((f) => ({
+            id: `contact-${f.email}`,
+            label: `Seguimiento pendiente: ${f.email}. Fecha: ${new Date(f.followup_at).toLocaleString("es-MX", { timeZone: "America/Mexico_City" })}`,
+            href: `/dashboard/customers?search=${encodeURIComponent(f.email)}`,
+          })),
+          ...lowStock
+            .slice(0, 12)
+            .map((p) => ({
+              id: `stock-${p.id}`,
+              label: `${p.title}: quedan ${p.stock} unidades`,
+              href: `/dashboard/products#product-${p.id}`,
+            })),
+          ...drafts
+            .slice(0, 12)
+            .map((p) => ({
+              id: `draft-${p.id}`,
+              label: `${p.title}: revisa el borrador importado antes de publicarlo`,
+              href: "/dashboard/products/import",
+            })),
+        ],
+        settlements: (orders ?? []).filter((o) => o.status === "COMPLETED"),
+        emailDelivery:
+          process.env.ROUTEFLOW_EMAIL_DELIVERY === "enabled" && Boolean(process.env.RESEND_API_KEY),
+      },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
   } catch (e) {
     return apiErrorResponse(
       "INTERNAL_ERROR",

@@ -4,7 +4,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { OperationalAlert, type AlertView } from "./OperationalAlert";
 interface Readiness {
-  taskSummary?: { pendingOrders: number; incompletePackages: number };
+  taskSummary?: {
+    pendingOrders: number;
+    incompletePackages: number;
+    dueContacts?: number;
+    lowStock?: number;
+    importedDrafts?: number;
+    inventoryMayBePartial?: boolean;
+  };
   actions?: { id: string; label: string; href: string }[];
   alerts?: AlertView[];
   checks: { label: string; done: boolean; href: string }[];
@@ -107,6 +114,11 @@ export function StoreReadiness() {
             <p className="text-sm">
               {data.taskSummary.pendingOrders} pedidos requieren una acción ·{" "}
               {data.taskSummary.incompletePackages} productos con paquete incompleto.{" "}
+              {data.taskSummary.dueContacts ?? 0} contactos pendientes ·{" "}
+              {data.taskSummary.lowStock ?? 0} productos con stock bajo ·{" "}
+              {data.taskSummary.importedDrafts ?? 0} borradores importados.{" "}
+              {data.taskSummary.inventoryMayBePartial &&
+                "El resumen de inventario muestra una selección de productos. "}
               <Link
                 className="inline-block min-h-11 underline text-accent-600"
                 href="/dashboard/orders"
@@ -120,6 +132,11 @@ export function StoreReadiness() {
               <summary className="min-h-11 cursor-pointer py-3 font-semibold">
                 Otras tareas pendientes
               </summary>
+              <p className="text-sm text-muted">
+                Los contactos incluyen fechas vencidas y las próximas 24 horas. Actualiza o elimina
+                la fecha desde Clientes al atenderlos. Estos avisos no envían mensajes
+                automáticamente.
+              </p>
               {data.actions?.slice(1).map((action) => (
                 <Link
                   key={action.id}

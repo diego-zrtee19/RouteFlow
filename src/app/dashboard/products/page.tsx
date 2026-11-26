@@ -206,9 +206,17 @@ export default function ProductsPage() {
               Consulta existencias, prepara el envío y comparte enlaces desde tus productos.
             </p>
           </div>
-          <Link href="/dashboard/products/new?mode=quick" className={buttonStyles()}>
-            <Plus className="w-4 h-4" aria-hidden="true" /> Nuevo producto
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/dashboard/products/import"
+              className={buttonStyles({ variant: "secondary" })}
+            >
+              Importar y exportar
+            </Link>
+            <Link href="/dashboard/products/new?mode=quick" className={buttonStyles()}>
+              <Plus className="w-4 h-4" aria-hidden="true" /> Nuevo producto
+            </Link>
+          </div>
         </div>
 
         {loaded && (

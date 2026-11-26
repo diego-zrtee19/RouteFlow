@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
@@ -184,8 +185,10 @@ function CustomerCard({
   );
 }
 function Customers() {
-  const [search, setSearch] = useState("");
-  const [query, setQuery] = useState("");
+  const params = useSearchParams();
+  const initialSearch = (params.get("search") ?? "").slice(0, 100);
+  const [search, setSearch] = useState(initialSearch);
+  const [query, setQuery] = useState(initialSearch);
   const [offset, setOffset] = useState(0);
   const [rows, setRows] = useState<CustomerSummary[]>([]);
   const [hasMore, setHasMore] = useState(false);
@@ -343,5 +346,11 @@ function Customers() {
 }
 export default function CustomersPage() {
   const { userId } = useAuth();
-  return <DashboardLayout>{userId && <Customers key={userId} />}</DashboardLayout>;
+  return (
+    <DashboardLayout>
+      <Suspense fallback={<p role="status">Cargando clientes…</p>}>
+        {userId && <Customers key={userId} />}
+      </Suspense>
+    </DashboardLayout>
+  );
 }
