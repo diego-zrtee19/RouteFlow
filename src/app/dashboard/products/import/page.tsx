@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
@@ -34,12 +34,14 @@ function InventoryTools() {
   const [hasMore, setHasMore] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [csv, setCsv] = useState("");
+  const [fileName, setFileName] = useState("");
   const [rows, setRows] = useState<InventoryImportRow[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [clientId, setClientId] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [failure, setFailure] = useState("");
+  const fileRevision = useRef(0);
   const load = useCallback(async () => {
     const res = await fetch(endpoint, { cache: "no-store" });
     const data = await res.json();
@@ -59,7 +61,9 @@ function InventoryTools() {
     };
   }, [load]);
   async function choose(file: File | undefined) {
+    const revision = ++fileRevision.current;
     setCsv("");
+    setFileName(file?.name ?? "");
     setRows([]);
     setErrors([]);
     setNotice("");
@@ -71,12 +75,14 @@ function InventoryTools() {
     }
     try {
       const text = await file.text();
+      if (revision !== fileRevision.current) return;
       const result = parseInventoryImport(text);
       setCsv(text);
       setRows(result.products);
       setErrors(result.errors);
       setClientId(crypto.randomUUID());
     } catch (e) {
+      if (revision !== fileRevision.current) return;
       setErrors([e instanceof Error ? e.message : "No pudimos leer el archivo"]);
     }
   }
@@ -97,7 +103,11 @@ function InventoryTools() {
       setNotice(
         productId
           ? "Producto publicado en tu catálogo."
-          : `${data.count} productos ${data.duplicate ? "ya estaban importados; no se duplicaron" : "guardados como borradores"}.`,
+          : data.count === 1
+            ? data.duplicate
+              ? "El producto ya estaba importado; no se duplicó."
+              : "Producto guardado como borrador."
+            : `${data.count} productos ${data.duplicate ? "ya estaban importados; no se duplicaron" : "guardados como borradores"}.`,
       );
       if (!productId) {
         setCsv("");
@@ -189,9 +199,16 @@ function InventoryTools() {
             accept=".csv,text/csv"
             disabled={busy}
             className="mt-4 block max-w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-accent-700 file:px-4 file:py-3 file:font-semibold file:text-white"
-            onChange={(e) => void choose(e.target.files?.[0])}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.currentTarget.value = "";
+              void choose(file);
+            }}
           />
         </label>
+        {fileName && (
+          <p className="break-all text-sm text-muted">Archivo seleccionado: {fileName}</p>
+        )}
         {errors.length > 0 && (
           <div role="alert" className="rounded-xl bg-rose-50 p-4">
             <p className="font-semibold">Corrige el archivo antes de importar</p>
@@ -205,7 +222,9 @@ function InventoryTools() {
         )}
         {rows.length > 0 && (
           <>
-            <h3 className="font-semibold">2. Revisa {rows.length} productos</h3>
+            <h3 className="font-semibold">
+              2. Revisa {rows.length} {rows.length === 1 ? "producto" : "productos"}
+            </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <caption className="sr-only">Primeros diez productos del archivo</caption>
@@ -243,7 +262,7 @@ function InventoryTools() {
               isLoading={busy}
               onClick={() => void send()}
             >
-              Guardar {rows.length} borradores
+              Guardar {rows.length} {rows.length === 1 ? "borrador" : "borradores"}
             </Button>
           </>
         )}

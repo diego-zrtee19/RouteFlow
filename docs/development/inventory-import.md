@@ -29,3 +29,5 @@ Pendiente: edición de metadatos privados para productos anteriores, motivo/acto
 `tests/inventoryImport.test.ts`: CSV, BOM, comillas, saltos, límites, SKU duplicado y decimales.
 `tests/inventoryImportApi.test.ts`: sesión, origen, propiedad y validación en servidor.
 `tests/sql/inventory-import.sql`: rollback completo de fixtures; deduplicación, publicación segura, aislamiento y privacidad. Ejecutar exclusivamente en desarrollo. `tests/sql/standalone-quotes.sql` verifica que el trigger conserva la reserva única del checkout.
+
+Verificado en Preview el 25 de noviembre de 2026: carga CSV → vista previa → creación de un borrador → bloqueo al publicar sin foto → recarga → reimportación sin duplicados → tarea del borrador en el panel. El artículo ficticio, su historial y su lote se retiraron después de comprobar que no tenían enlaces ni pedidos. No se efectuó ningún cobro. Compilación local completa y 361 pruebas aprobadas (48 archivos).
