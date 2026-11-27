@@ -11,3 +11,5 @@ Notas y próximo contacto siguen utilizando control de revisión para evitar sob
 Migración `20261126033954_seller_customer_prospects.sql`, aplicada únicamente a desarrollo. `tests/sql/customer-prospects.sql` comprueba aislamiento, duplicados, notas antes del pedido y agrupación posterior, con todos los datos revertidos. `tests/sql/customer-followup.sql` conserva sus verificaciones anteriores. Pruebas de API y validación en `tests/customerFollowup.test.ts`.
 
 Pendiente: contactos sin correo identificados por teléfono/canal, edición/archivo de datos básicos con auditoría, preferencias estructuradas y vinculación explícita a conversaciones. No inferir identidades de Instagram/WhatsApp por coincidencias de nombre.
+
+Verificado en Preview el 27 de noviembre de 2026: creación sin pedido, rechazo de duplicado sin sobrescribir, persistencia de notas tras recargar, fecha rápida «Mañana a las 9:00», edición manual de fecha, aparición de contacto vencido en el panel y retirada del recordatorio. La edición conserva el valor al salir del campo; no se envió ningún mensaje.

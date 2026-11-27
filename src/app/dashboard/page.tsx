@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { StoreReadiness } from "@/components/dashboard/StoreReadiness";
+import { SellerTasks } from "@/components/dashboard/SellerTasks";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
@@ -277,6 +278,7 @@ export default function DashboardOverviewPage() {
           </Link>
         </div>
         <StoreReadiness />
+        <SellerTasks />
         <details className="rounded-2xl border border-line bg-white p-5 space-y-5">
           <summary className="cursor-pointer min-h-11 py-2 font-semibold text-accent-700">
             Mis resultados y actividad
