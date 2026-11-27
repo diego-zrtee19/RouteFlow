@@ -13,3 +13,5 @@ El bloque «Mis tareas» vive en el panel existente, después de «Tu siguiente 
 API: `/api/dashboard/tasks`. Migración de desarrollo: `20261127151619_seller_tasks.sql`. Pruebas: `tests/sellerTasks.test.ts` (datos, sesión, origen, propiedad, conflictos) y `tests/sql/seller-tasks.sql` (transacciones, reintentos, aislamiento e historial; fixtures revertidos).
 
 Pendiente: asignación a colaboradores cuando se implemente el acceso por equipo; relación explícita de tareas manuales con conversaciones/pedidos; edición versionada del contenido y avisos programados. No presentar este bloque como automatización o notificación externa.
+
+Verificado en Preview el 27 de noviembre de 2026: crear tarea con detalle, completar, reabrir, completar de nuevo y consultar los cuatro movimientos del historial. La tarea ficticia «QA · verificar tareas de RouteFlow» permanece completada para conservar evidencia; no deja pendientes abiertos. Compilación Preview aprobada, TypeScript/ESLint sin errores y 368 pruebas aprobadas en 49 archivos. Las pruebas SQL revierten sus fixtures.

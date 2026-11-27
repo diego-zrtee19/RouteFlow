@@ -80,7 +80,8 @@ function TaskPanel() {
   return (
     <details className="rounded-2xl border border-line bg-white p-5 sm:p-6">
       <summary className="cursor-pointer py-2 text-lg font-semibold">
-        Mis tareas {data ? `· ${data.openCount} pendientes` : ""}
+        Mis tareas{" "}
+        {data ? `· ${data.openCount} ${data.openCount === 1 ? "pendiente" : "pendientes"}` : ""}
       </summary>
       <p className="mt-2 text-sm text-muted">
         Anota pendientes propios del negocio. Los avisos de pedidos, clientes y stock siguen
